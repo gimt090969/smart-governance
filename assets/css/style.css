@@ -1,0 +1,564 @@
+/* ========================================
+   SMART GOVERNANCE MUNICIPALITY PLATFORM
+   Design System - Thai Government SaaS
+   ======================================== */
+
+/* ---- Google Font & CSS Custom Properties ---- */
+@import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+
+:root {
+    --primary:      #1a56db;
+    --primary-dark: #1240ab;
+    --primary-soft: rgba(26, 86, 219, 0.08);
+    --success:      #057a55;
+    --warning:      #c27803;
+    --danger:       #c81e1e;
+    --info:         #0694a2;
+    --light:        #f8fafc;
+    --dark:         #111928;
+    --sidebar-bg:   #111928;
+    --sidebar-text: #9ca3af;
+    --sidebar-hover:#1a56db;
+    --border:       #e5e7eb;
+    --card-shadow:  0 1px 3px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.05);
+    --card-radius:  14px;
+    --font-main:    'Prompt', 'Sarabun', sans-serif;
+}
+
+/* ---- Reset & Base ---- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    font-family: var(--font-main);
+    background-color: #f0f3f8;
+    color: #1f2937;
+    font-size: 0.95rem;
+    min-height: 100vh;
+    display: flex;
+}
+
+a { text-decoration: none; }
+
+/* ========================================
+   SIDEBAR LAYOUT
+   ======================================== */
+#sidebar {
+    min-width: 255px;
+    max-width: 255px;
+    min-height: 100vh;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: var(--sidebar-bg) !important;
+    transition: all 0.3s cubic-bezier(.4,0,.2,1);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    flex-shrink: 0;
+}
+
+.sidebar-header {
+    padding: 1.5rem 1rem 1.25rem;
+    background: rgba(0,0,0,0.25);
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+    text-align: center;
+}
+
+.sidebar-header h6 {
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    color: #f3f4f6;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.sidebar-header small {
+    font-size: 0.72rem;
+    color: var(--sidebar-text);
+}
+
+/* --- Sidebar nav links --- */
+#sidebar ul.components {
+    padding: 0.75rem 0.75rem;
+    flex: 1;
+}
+
+#sidebar ul.components li {
+    margin-bottom: 2px;
+}
+
+#sidebar ul.components li a,
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.65rem 0.85rem;
+    border-radius: 10px;
+    color: var(--sidebar-text);
+    font-size: 0.88rem;
+    font-weight: 400;
+    transition: all 0.18s ease;
+    cursor: pointer;
+}
+
+#sidebar ul.components li a i,
+.sidebar-link i {
+    width: 20px;
+    text-align: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+#sidebar ul.components li a:hover,
+.sidebar-link:hover {
+    background: rgba(255,255,255,0.07);
+    color: #fff;
+    transform: translateX(2px);
+}
+
+#sidebar ul.components li.active > a,
+.sidebar-link.active {
+    background: var(--sidebar-hover);
+    color: #fff !important;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(26,86,219,0.35);
+}
+
+/* Sidebar section label */
+.sidebar-section-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6b7280;
+    padding: 0.9rem 0.85rem 0.35rem;
+    font-weight: 600;
+}
+
+/* ---- Main Content Area ---- */
+#content {
+    flex: 1;
+    min-width: 0;
+    transition: all 0.3s;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ========================================
+   TOP NAVBAR
+   ======================================== */
+.top-navbar {
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 0.6rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.page-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 0;
+}
+
+/* ========================================
+   CARDS
+   ======================================== */
+.card {
+    border: none !important;
+    border-radius: var(--card-radius) !important;
+    box-shadow: var(--card-shadow) !important;
+    background: #fff;
+}
+
+.card-header {
+    background: transparent !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 1rem 1.25rem 0.75rem !important;
+}
+
+.card-header.border-0 {
+    border-bottom: none !important;
+}
+
+/* KPI Cards */
+.kpi-card {
+    border-radius: var(--card-radius);
+    padding: 1.25rem 1.5rem;
+    background: #fff;
+    box-shadow: var(--card-shadow);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.1);
+}
+
+.kpi-card .kpi-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+
+.kpi-card .kpi-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--dark);
+}
+
+.kpi-card .kpi-label {
+    font-size: 0.82rem;
+    color: #6b7280;
+    font-weight: 400;
+}
+
+.kpi-card::after {
+    content: '';
+    position: absolute;
+    top: -15px;
+    right: -15px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    opacity: 0.06;
+}
+
+/* ========================================
+   TABLE STYLES
+   ======================================== */
+.table {
+    font-size: 0.875rem;
+}
+
+.table thead th {
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7280;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: #f9fafb;
+}
+
+.table tbody td {
+    padding: 0.8rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+}
+
+.table-hover tbody tr:hover td {
+    background-color: #f0f5ff;
+}
+
+/* ========================================
+   BADGES
+   ======================================== */
+.badge {
+    font-weight: 500;
+    font-size: 0.73rem;
+    padding: 0.35em 0.7em;
+    border-radius: 6px;
+    letter-spacing: 0.01em;
+}
+
+/* ========================================
+   BUTTONS
+   ======================================== */
+.btn {
+    font-family: var(--font-main);
+    font-weight: 500;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: all 0.18s ease;
+}
+
+.btn-primary {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.btn-lg { font-size: 1rem; padding: 0.65rem 1.5rem; }
+.btn-sm { font-size: 0.8rem; padding: 0.3rem 0.75rem; }
+.btn-xs { font-size: 0.72rem; padding: 0.2rem 0.5rem; }
+
+/* ========================================
+   STATUS INDICATORS
+   ======================================== */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+}
+
+.status-dot.online { background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.2); }
+.status-dot.busy   { background: #f59e0b; }
+.status-dot.offline{ background: #6b7280; }
+
+/* ========================================
+   FORM CONTROLS
+   ======================================== */
+.form-control, .form-select {
+    font-family: var(--font-main);
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-size: 0.875rem;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+}
+
+.form-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 0.4rem;
+}
+
+/* ========================================
+   SIDEBAR MOBILE
+   ======================================== */
+@media (max-width: 991.98px) {
+    body { display: block; }
+
+    #sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 1050;
+        transform: translateX(-100%);
+        min-width: 255px;
+    }
+
+    #sidebar.active {
+        transform: translateX(0);
+    }
+
+    #sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        z-index: 1049;
+    }
+
+    #sidebar-overlay.active { display: block; }
+
+    #content {
+        width: 100%;
+    }
+}
+
+/* ========================================
+   PAGE CONTENT AREA
+   ======================================== */
+.page-content {
+    padding: 1.5rem;
+    flex: 1;
+}
+
+/* ========================================
+   MODULE CARDS (Big action tiles)
+   ======================================== */
+.module-tile {
+    border-radius: var(--card-radius);
+    padding: 1.5rem;
+    color: #fff;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: var(--card-shadow);
+    display: block;
+    text-decoration: none;
+}
+
+.module-tile:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+    color: #fff;
+}
+
+.module-tile i { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.module-tile h5 { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; }
+.module-tile small { opacity: 0.85; font-size: 0.78rem; }
+
+/* ========================================
+   ALERT STYLES (Custom)
+   ======================================== */
+.alert-custom {
+    border-radius: 10px;
+    border: none;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* ========================================
+   GIS MAP AREA
+   ======================================== */
+#taxMap, #routeMap, #gisMap {
+    height: 500px;
+    width: 100%;
+    border-radius: 10px;
+    z-index: 1;
+}
+
+/* ========================================
+   CITIZEN PORTAL SPECIFIC
+   ======================================== */
+.citizen-header {
+    background: linear-gradient(135deg, #1a56db 0%, #0694a2 100%);
+    color: white;
+    padding: 4.5rem 0 5rem;
+    border-bottom-left-radius: 30px;
+    border-bottom-right-radius: 30px;
+    position: relative;
+    overflow: hidden;
+}
+
+.citizen-header::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 260px;
+    height: 260px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+}
+
+.citizen-header::after {
+    content: '';
+    position: absolute;
+    bottom: -80px;
+    left: -40px;
+    width: 200px;
+    height: 200px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 50%;
+}
+
+.action-card {
+    border-radius: var(--card-radius);
+    padding: 1.5rem 1rem;
+    text-align: center;
+    background: #fff;
+    box-shadow: var(--card-shadow);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid var(--border);
+}
+
+.action-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border-color: var(--primary);
+}
+
+.action-card i {
+    font-size: 2.25rem;
+    margin-bottom: 0.75rem;
+    display: block;
+}
+
+/* ========================================
+   LOGIN PAGE
+   ======================================== */
+.login-page {
+    background: linear-gradient(145deg, #e8ecf5 0%, #cdd8f0 50%, #b8c9e8 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-card {
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid rgba(255,255,255,0.8);
+    padding: 2.5rem;
+}
+
+/* ========================================
+   UTILITIES
+   ======================================== */
+.text-sm   { font-size: 0.82rem !important; }
+.text-xs   { font-size: 0.72rem !important; }
+.fw-semibold { font-weight: 600 !important; }
+.rounded-10 { border-radius: 10px !important; }
+.rounded-14 { border-radius: 14px !important; }
+
+.hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.1) !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.35s ease both;
+}
+
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+@media print {
+    #sidebar, .top-navbar, .btn, .navbar { display: none !important; }
+    #content { margin: 0 !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+}
+
