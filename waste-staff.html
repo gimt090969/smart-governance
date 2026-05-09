@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เจ้าหน้าที่รับชำระ - Smart Connect</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/responsive.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+<nav id="sidebar"></nav>
+<div id="content">
+    <div id="top-navbar" class="top-navbar" data-title="ข้อมูลเจ้าหน้าที่รับชำระค่าธรรมเนียมขยะ"></div>
+    <div class="page-content">
+        <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+            <div>
+                <h4 class="fw-bold mb-1"><i class="fa-solid fa-users-gear text-primary me-2"></i>เจ้าหน้าที่รับชำระ</h4>
+                <nav aria-label="breadcrumb"><ol class="breadcrumb mb-0" style="font-size:0.8rem;">
+                    <li class="breadcrumb-item"><a href="dashboard.html" class="text-decoration-none">แดชบอร์ด</a></li>
+                    <li class="breadcrumb-item"><a href="finance.html" class="text-decoration-none">กองคลัง</a></li>
+                    <li class="breadcrumb-item"><a href="waste-dashboard.html" class="text-decoration-none">ค่าธรรมเนียมขยะ</a></li>
+                    <li class="breadcrumb-item active">เจ้าหน้าที่</li>
+                </ol></nav>
+            </div>
+            <button class="btn btn-sm btn-primary fw-semibold" onclick="openAddStaff()"><i class="fa-solid fa-plus me-1"></i>เพิ่มเจ้าหน้าที่</button>
+        </div>
+
+        <div class="row g-3" id="staffCards"></div>
+    </div>
+</div>
+
+<!-- Staff Modal -->
+<div class="modal fade" id="staffModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-bottom"><h5 class="modal-title fw-bold" id="staffModalTitle"><i class="fa-solid fa-user-plus text-primary me-2"></i>เพิ่มเจ้าหน้าที่</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body p-4">
+                <form id="staffForm" onsubmit="saveStaff(event)">
+                    <input type="hidden" id="sEditId">
+                    <div class="row g-3">
+                        <div class="col-12"><label class="form-label fw-semibold text-sm">ชื่อ-สกุล <span class="text-danger">*</span></label><input type="text" class="form-control" id="sName" required></div>
+                        <div class="col-md-6"><label class="form-label fw-semibold text-sm">ตำแหน่ง</label><input type="text" class="form-control" id="sPosition"></div>
+                        <div class="col-md-6"><label class="form-label fw-semibold text-sm">Username</label><input type="text" class="form-control" id="sUsername"></div>
+                        <div class="col-md-6"><label class="form-label fw-semibold text-sm">สิทธิ์</label><select class="form-select" id="sRole"><option>Admin</option><option>Finance Officer</option><option>Collector</option></select></div>
+                        <div class="col-md-6"><label class="form-label fw-semibold text-sm">เบอร์โทร</label><input type="text" class="form-control" id="sPhone"></div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                        <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold"><i class="fa-solid fa-save me-1"></i>บันทึก</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/waste.js"></script>
+<script src="assets/js/responsive.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() { initWasteData(); renderStaff(); });
+
+function renderStaff() {
+    const staff = getWasteStaff();
+    const roleBadge = r => r==='Admin'?'bg-danger':r==='Finance Officer'?'bg-primary':'bg-success';
+    document.getElementById('staffCards').innerHTML = staff.map(s => `
+        <div class="col-md-6 col-lg-4">
+            <div class="card hover-lift">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#1a56db,#3b82f6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;font-weight:700;">
+                            ${s.name.charAt(0)}
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0">${s.name}</h6>
+                            <span class="text-xs text-muted">${s.position||'-'}</span>
+                        </div>
+                    </div>
+                    <div class="mb-2"><span class="text-xs text-muted">Username:</span> <span class="text-sm fw-semibold">${s.username||'-'}</span></div>
+                    <div class="mb-2"><span class="text-xs text-muted">เบอร์โทร:</span> <span class="text-sm">${s.phone||'-'}</span></div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div>
+                            <span class="badge ${roleBadge(s.role)} me-1">${s.role}</span>
+                            <span class="badge ${s.status==='active'?'bg-success':'bg-secondary'}">${s.status==='active'?'ใช้งาน':'ปิดใช้งาน'}</span>
+                        </div>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-xs btn-outline-primary" onclick="editStaff('${s.id}')" title="แก้ไข"><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn btn-xs btn-outline-warning" onclick="resetPassword('${s.id}')" title="Reset Password"><i class="fa-solid fa-key"></i></button>
+                            <button class="btn btn-xs btn-outline-${s.status==='active'?'danger':'success'}" onclick="toggleStaff('${s.id}')" title="${s.status==='active'?'ปิดใช้งาน':'เปิดใช้งาน'}">
+                                <i class="fa-solid fa-${s.status==='active'?'ban':'check'}"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function openAddStaff() {
+    document.getElementById('sEditId').value = '';
+    document.getElementById('staffModalTitle').innerHTML = '<i class="fa-solid fa-user-plus text-primary me-2"></i>เพิ่มเจ้าหน้าที่';
+    document.getElementById('staffForm').reset();
+    new bootstrap.Modal(document.getElementById('staffModal')).show();
+}
+
+function editStaff(id) {
+    const s = getWasteStaff().find(x => x.id === id);
+    if (!s) return;
+    document.getElementById('sEditId').value = s.id;
+    document.getElementById('staffModalTitle').innerHTML = '<i class="fa-solid fa-pen text-warning me-2"></i>แก้ไขเจ้าหน้าที่';
+    document.getElementById('sName').value = s.name;
+    document.getElementById('sPosition').value = s.position||'';
+    document.getElementById('sUsername').value = s.username||'';
+    document.getElementById('sRole').value = s.role;
+    document.getElementById('sPhone').value = s.phone||'';
+    new bootstrap.Modal(document.getElementById('staffModal')).show();
+}
+
+function saveStaff(e) {
+    e.preventDefault();
+    const staff = getWasteStaff();
+    const editId = document.getElementById('sEditId').value;
+    const data = { name:document.getElementById('sName').value, position:document.getElementById('sPosition').value, username:document.getElementById('sUsername').value, role:document.getElementById('sRole').value, phone:document.getElementById('sPhone').value, status:'active' };
+    if (editId) { const idx = staff.findIndex(s => s.id === editId); if(idx>=0){data.id=editId;data.status=staff[idx].status;staff[idx]=data;} }
+    else { data.id = 'WS' + String(staff.length+1).padStart(3,'0'); staff.push(data); }
+    saveWasteStaff(staff);
+    bootstrap.Modal.getInstance(document.getElementById('staffModal')).hide();
+    showToast('บันทึกสำเร็จ','success');
+    renderStaff();
+}
+
+function resetPassword(id) { Swal.fire({title:'Reset Password?',icon:'question',showCancelButton:true,confirmButtonText:'Reset'}).then(r=>{if(r.isConfirmed)showToast('Reset Password สำเร็จ','success');}); }
+
+function toggleStaff(id) {
+    const staff = getWasteStaff();
+    const s = staff.find(x => x.id === id);
+    if (!s) return;
+    s.status = s.status === 'active' ? 'inactive' : 'active';
+    saveWasteStaff(staff);
+    showToast(`${s.status==='active'?'เปิด':'ปิด'}ใช้งาน ${s.name} แล้ว`,'success');
+    renderStaff();
+}
+</script>
+</body>
+</html>

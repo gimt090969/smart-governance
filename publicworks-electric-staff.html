@@ -15,6 +15,7 @@
         .staff-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important; }
         .avatar-circle { width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:700;color:#fff; }
     </style>
+    <link rel="stylesheet" href="assets/css/responsive.css">
 </head>
 <body class="bg-slate-50">
 <nav id="sidebar"></nav>
@@ -113,7 +114,7 @@ async function loadAll() {
     try {
         if (supabaseClient) {
             const resStaff = await supabaseClient.from('electric_staff').select('*').order('name');
-            const resRepairs = await supabaseClient.from('electric_repairs').select('id, complaint_id, location, damage_cause, staff_id, status, repair_date');
+            const resRepairs = await supabaseClient.from('electric_repairs').select('*').order('created_at', { ascending: false });
             
             allStaff = resStaff.data || [];
             allRepairs = resRepairs.data || [];
@@ -164,19 +165,23 @@ function renderStaff() {
 
 function renderJobs() {
     const tbody = document.getElementById('jobsBody');
-    const assigned = allRepairs.filter(r => r.staff_id);
-    if (!assigned.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">ไม่มีข้อมูล</td></tr>'; return; }
-    const statusLabels = { pending:'รอรับเรื่อง', accepted:'รับเรื่องแล้ว', in_progress:'กำลังดำเนินการ', completed:'เสร็จสิ้น' };
-    const statusClass = { pending:'bg-warning text-dark', accepted:'bg-info text-white', in_progress:'bg-primary', completed:'bg-success' };
+    // แสดงงานที่มีการมอบหมาย (staff_id หรือ staff_name) + งานที่ยังไม่ได้มอบหมาย
+    const assigned = allRepairs.filter(r => r.staff_id || r.staff_name);
+    if (!assigned.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">ไม่มีงานซ่อมที่มอบหมาย</td></tr>'; return; }
+    const statusLabels = { pending:'รอรับเรื่อง', accepted:'รับเรื่องแล้ว', in_progress:'กำลังดำเนินการ', completed:'เสร็จสิ้น', cancelled:'ยกเลิก' };
+    const statusClass = { pending:'bg-warning text-dark', accepted:'bg-info text-white', in_progress:'bg-primary', completed:'bg-success', cancelled:'bg-danger' };
     tbody.innerHTML = assigned.map(r => {
-        const staff = allStaff.find(s => s.id === r.staff_id);
+        const staff = r.staff_id ? allStaff.find(s => s.id === r.staff_id) : null;
+        const staffDisplay = staff ? staff.name : (r.staff_name || '-');
+        const loc = r.reporter_address || r.location || '-';
+        const date = r.created_at ? new Date(r.created_at).toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}) : (r.repair_date || '-');
         return `<tr>
-            <td class="ps-4 fw-bold">${r.complaint_id || r.id}</td>
-            <td>${r.location || '-'}</td>
+            <td class="ps-4 fw-bold text-primary">${r.complaint_id || r.id}</td>
+            <td>${loc}</td>
             <td>${r.damage_cause || '-'}</td>
-            <td>${staff ? staff.name : '-'}</td>
+            <td>${staffDisplay}</td>
             <td><span class="badge ${statusClass[r.status] || 'bg-secondary'}">${statusLabels[r.status] || r.status}</span></td>
-            <td class="text-xs text-muted">${r.repair_date || '-'}</td>
+            <td class="text-xs text-muted">${date}</td>
         </tr>`;
     }).join('');
 }
@@ -242,5 +247,6 @@ document.getElementById('staffModal').addEventListener('hidden.bs.modal', () => 
     document.getElementById('staffModalTitle').innerHTML = '<i class="fa-solid fa-user-plus text-primary me-2"></i>เพิ่มเจ้าหน้าที่';
 });
 </script>
+    <script src="assets/js/responsive.js"></script>
 </body>
 </html>

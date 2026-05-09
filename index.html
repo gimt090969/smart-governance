@@ -368,6 +368,7 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
     </style>
+    <link rel="stylesheet" href="assets/css/responsive.css">
 </head>
 
 <body>
@@ -452,7 +453,8 @@
                                     alt="Smart Connect Logo"
                                     style="height:65px; margin-bottom:0.5rem; border-radius: 8px;">
                                 <span
-                                    style="color:#fff; font-size:0.8rem; font-weight:600; letter-spacing:0.02em;">Smart Connect</span>
+                                    style="color:#fff; font-size:0.8rem; font-weight:600; letter-spacing:0.02em;">Smart
+                                    Connect</span>
                             </div>
                             <h3 class="fs-5 fw-bold mb-0">เข้าสู่ระบบ (Login)</h3>
                         </div>
@@ -508,8 +510,8 @@
                                             (Username / ID)</label>
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-                                            <input type="text" class="form-control" id="username" value="admin"
-                                                required placeholder="กรอกชื่อผู้ใช้งาน">
+                                            <input type="text" class="form-control" id="username" required
+                                                placeholder="กรอกชื่อผู้ใช้งาน">
                                         </div>
                                     </div>
                                     <div class="mb-3">
@@ -518,8 +520,8 @@
                                             (Password)</label>
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                                            <input type="password" class="form-control" id="password"
-                                                value="superadmin123" required placeholder="••••••••">
+                                            <input type="password" class="form-control" id="password" required
+                                                placeholder="••••••••">
                                             <button type="button" class="btn pw-toggle" onclick="togglePw()"
                                                 id="pw-toggle-btn"><i class="fa-regular fa-eye"
                                                     id="pw-eye"></i></button>
@@ -586,7 +588,8 @@
                         <!-- Section: ข้อมูลส่วนตัว -->
                         <div class="mb-2"
                             style="color:rgba(255,255,255,0.4);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">
-                            <i class="fa-solid fa-user-pen me-1"></i> ข้อมูลส่วนตัว</div>
+                            <i class="fa-solid fa-user-pen me-1"></i> ข้อมูลส่วนตัว
+                        </div>
 
                         <!-- เลขบัตรประชาชน -->
                         <div class="mb-3">
@@ -633,7 +636,8 @@
                         <!-- Section: ที่อยู่ -->
                         <div class="mb-2 mt-3"
                             style="color:rgba(255,255,255,0.4);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">
-                            <i class="fa-solid fa-map-location-dot me-1"></i> ที่อยู่</div>
+                            <i class="fa-solid fa-map-location-dot me-1"></i> ที่อยู่
+                        </div>
 
                         <!-- บ้านเลขที่ + หมู่ที่ -->
                         <div class="row g-2 mb-3">
@@ -697,7 +701,8 @@
                         <!-- Section: ข้อมูลติดต่อ -->
                         <div class="mb-2 mt-3"
                             style="color:rgba(255,255,255,0.4);font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">
-                            <i class="fa-solid fa-address-book me-1"></i> ข้อมูลติดต่อ</div>
+                            <i class="fa-solid fa-address-book me-1"></i> ข้อมูลติดต่อ
+                        </div>
 
                         <div class="row g-2 mb-3">
                             <div class="col-6">
@@ -817,6 +822,7 @@
             const btn = document.getElementById('loginBtn');
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
 
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>กำลังตรวจสอบ...';
@@ -852,7 +858,14 @@
                 };
 
                 localStorage.setItem('sgov_user', JSON.stringify(userInfo));
-                
+
+                // จัดการฟังก์ชันจดจำการเข้าสู่ระบบ (Remember Me)
+                if (rememberMe) {
+                    localStorage.setItem('sgov_saved_credentials', JSON.stringify({ username, password }));
+                } else {
+                    localStorage.removeItem('sgov_saved_credentials');
+                }
+
                 // เก็บ Audit Log (Optional)
                 try {
                     await supabaseClient.from('Audit_Log').insert([{
@@ -1000,7 +1013,7 @@
                         .select('national_id')
                         .eq('national_id', userData.nationalId)
                         .maybeSingle();
-                        
+
                     if (existingUser) {
                         showRegError('เลขบัตรประชาชนนี้ถูกลงทะเบียนกับบัญชี LINE อื่นแล้ว');
                         btn.disabled = false;
@@ -1033,7 +1046,7 @@
                             phone: userData.phone,
                             email: userData.email
                         });
-                        
+
                     if (sbError) {
                         console.error("Supabase Insert Error:", sbError);
                         if (sbError.code === '23505') {
@@ -1066,6 +1079,21 @@
                     // Already logged in → go to citizen portal
                     // (don't auto-redirect to let staff still use this page)
                 }
+            }
+
+            // Load saved staff credentials if Remember Me was checked previously
+            try {
+                const savedCreds = localStorage.getItem('sgov_saved_credentials');
+                if (savedCreds) {
+                    const parsed = JSON.parse(savedCreds);
+                    if (parsed && parsed.username && parsed.password) {
+                        document.getElementById('username').value = parsed.username;
+                        document.getElementById('password').value = parsed.password;
+                        document.getElementById('rememberMe').checked = true;
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load saved credentials', e);
             }
 
             const result = LineAuth.handleCallback();
@@ -1145,6 +1173,7 @@
             }
         })();
     </script>
+    <script src="assets/js/responsive.js"></script>
 </body>
 
 </html>

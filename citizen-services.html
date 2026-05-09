@@ -107,6 +107,7 @@
             z-index: 1; /* prevent overlapping with modal overlay */
         }
     </style>
+    <link rel="stylesheet" href="assets/css/responsive.css">
 </head>
 <body>
 
@@ -374,12 +375,15 @@
                             
                             <div class="mb-3">
                                 <label class="form-label fw-semibold text-sm">เลขรหัสเสาไฟฟ้า <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="elecPoleId" required placeholder="เช่น PEA-12345 หรือเลขบนเสา">
+                                <input type="text" class="form-control" id="elecPoleId" list="poleList" required placeholder="พิมพ์หรือเลือกเลขเสาไฟฟ้า (เช่น PEA-12345)">
+                                <datalist id="poleList">
+                                    <!-- Options will be populated by JS -->
+                                </datalist>
                             </div>
 
                             <div class="mb-3">
                                 <label class="form-label fw-semibold text-sm">สาเหตุที่ชำรุด <span class="text-danger">*</span></label>
-                                <select class="form-select" id="elecDamageCause" required>
+                                <select class="form-select" id="elecDamageCause" onchange="toggleDamageCause(this.value)" required>
                                     <option value="" disabled selected>-- เลือกสาเหตุที่ชำรุด --</option>
                                     <option value="ไฟดับ">1. ไฟดับ</option>
                                     <option value="ไฟกระพริบ">2. ไฟกระพริบ</option>
@@ -387,6 +391,7 @@
                                     <option value="หลอดไฟ/โครมไฟ ชำรุด">4. หลอดไฟ/โครมไฟ ชำรุด</option>
                                     <option value="อื่นๆ">5. อื่นๆ</option>
                                 </select>
+                                <input type="text" class="form-control mt-2 d-none" id="elecDamageCauseOther" placeholder="โปรดระบุสาเหตุอื่นๆ">
                             </div>
 
                             <!-- Map Section -->
@@ -466,6 +471,15 @@
             if (currentUser) {
                 if (currentUser.lineAvatar) document.getElementById('navAvatar').src = currentUser.lineAvatar;
                 if (currentUser.fullName) document.getElementById('navName').textContent = currentUser.fullName;
+            }
+
+            // Check autoOpen parameter
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('autoOpen') === 'electric') {
+                // Add slight delay to ensure everything is rendered
+                setTimeout(() => {
+                    openElectricRepairForm();
+                }, 300);
             }
         });
 
@@ -551,6 +565,9 @@
             // Reset fields
             document.getElementById('elecPoleId').value = '';
             document.getElementById('elecDamageCause').value = '';
+            document.getElementById('elecDamageCauseOther').value = '';
+            document.getElementById('elecDamageCauseOther').classList.add('d-none');
+            document.getElementById('elecDamageCauseOther').removeAttribute('required');
             document.getElementById('elecImages').value = '';
             document.getElementById('elecLat').value = '';
             document.getElementById('elecLng').value = '';
@@ -558,6 +575,9 @@
 
             const modal = new bootstrap.Modal(document.getElementById('electricRepairModal'));
             modal.show();
+
+            // Fetch poles data for datalist
+            loadElectricPoles();
 
             // Initialize map after modal is fully shown to prevent tile rendering issues
             document.getElementById('electricRepairModal').addEventListener('shown.bs.modal', function () {
@@ -624,6 +644,40 @@
             document.getElementById('coordsDisplay').innerText = `พิกัด: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         }
 
+        // Load electric poles into datalist
+        async function loadElectricPoles() {
+            const poleList = document.getElementById('poleList');
+            if (poleList.options.length > 0) return; // Already loaded
+
+            try {
+                if (typeof supabaseClient !== 'undefined' && supabaseClient !== null) {
+                    const { data, error } = await supabaseClient
+                        .from('electric_poles')
+                        .select('pole_code')
+                        .order('pole_code');
+                    
+                    if (!error && data) {
+                        poleList.innerHTML = data.map(p => `<option value="${p.pole_code}">`).join('');
+                    }
+                }
+            } catch (err) {
+                console.warn('Failed to load electric poles', err);
+            }
+        }
+
+        // Toggle other damage cause input
+        function toggleDamageCause(val) {
+            const otherInput = document.getElementById('elecDamageCauseOther');
+            if (val === 'อื่นๆ') {
+                otherInput.classList.remove('d-none');
+                otherInput.setAttribute('required', 'true');
+                otherInput.focus();
+            } else {
+                otherInput.classList.add('d-none');
+                otherInput.removeAttribute('required');
+            }
+        }
+
         async function submitElectricRepairToSupabase(e) {
             e.preventDefault();
             const btn = document.getElementById('btnSubmitElectric');
@@ -672,12 +726,16 @@
 
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังบันทึกข้อมูล...';
 
+            const selectedCause = document.getElementById('elecDamageCause').value;
+            const finalCause = selectedCause === 'อื่นๆ' ? 'อื่นๆ - ' + document.getElementById('elecDamageCauseOther').value.trim() : selectedCause;
+
             const payload = {
+                reporter_id_card: currentUser ? currentUser.nationalId : null,
                 reporter_name: document.getElementById('elecFullName').value,
                 reporter_phone: document.getElementById('elecPhone').value,
                 reporter_address: document.getElementById('elecAddress').value,
                 pole_id: document.getElementById('elecPoleId').value.trim(),
-                damage_cause: document.getElementById('elecDamageCause').value.trim(),
+                damage_cause: finalCause,
                 latitude: parseFloat(lat),
                 longitude: parseFloat(lng),
                 status: 'pending',
@@ -772,5 +830,6 @@
             }
         }
     </script>
+    <script src="assets/js/responsive.js"></script>
 </body>
 </html>

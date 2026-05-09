@@ -18,6 +18,7 @@
         .pulse-dot { width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;animation:pulse 1.5s infinite; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
     </style>
+    <link rel="stylesheet" href="assets/css/responsive.css">
 </head>
 <body class="bg-slate-50">
 <nav id="sidebar"></nav>
@@ -50,21 +51,21 @@
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="kpiRow">
             <!-- Card 1 -->
             <div class="p-5 rounded-2xl shadow-md border-0 bg-gradient-to-br from-blue-600 to-blue-800 text-white hover:-translate-y-1 transition relative overflow-hidden">
-                <i class="fa-solid fa-plug-circle-bolt absolute -bottom-4 -right-4 text-7xl text-white opacity-10"></i>
+                <i class="fa-solid fa-file-lines absolute -bottom-4 -right-4 text-7xl text-white opacity-10"></i>
                 <div class="flex justify-between items-start mb-3 relative z-10">
-                    <div class="bg-white/20 p-3 rounded-xl text-white backdrop-blur-sm"><i class="fa-solid fa-plug-circle-bolt text-xl"></i></div>
+                    <div class="bg-white/20 p-3 rounded-xl text-white backdrop-blur-sm"><i class="fa-solid fa-file-lines text-xl"></i></div>
                 </div>
-                <h3 class="text-blue-100 text-sm font-medium mb-1 relative z-10">เสาไฟทั้งหมด</h3>
+                <h3 class="text-blue-100 text-sm font-medium mb-1 relative z-10">คำร้องแจ้งซ่อมทั้งหมด</h3>
                 <p class="text-3xl font-bold text-white relative z-10" id="kpiTotalPoles">-</p>
             </div>
             <!-- Card 2 -->
             <div class="p-5 rounded-2xl shadow-md border-0 bg-gradient-to-br from-rose-500 to-red-700 text-white hover:-translate-y-1 transition relative overflow-hidden">
-                <i class="fa-solid fa-triangle-exclamation absolute -bottom-4 -right-4 text-7xl text-white opacity-10"></i>
+                <i class="fa-solid fa-hourglass-half absolute -bottom-4 -right-4 text-7xl text-white opacity-10"></i>
                 <div class="flex justify-between items-start mb-3 relative z-10">
-                    <div class="bg-white/20 p-3 rounded-xl text-white backdrop-blur-sm"><i class="fa-solid fa-triangle-exclamation text-xl"></i></div>
+                    <div class="bg-white/20 p-3 rounded-xl text-white backdrop-blur-sm"><i class="fa-solid fa-hourglass-half text-xl"></i></div>
                     <span class="text-xs font-bold text-red-700 bg-white px-3 py-1 rounded-full shadow-sm" id="kpiBrokenBadge">-</span>
                 </div>
-                <h3 class="text-rose-100 text-sm font-medium mb-1 relative z-10">เสาเสีย / รอซ่อม</h3>
+                <h3 class="text-rose-100 text-sm font-medium mb-1 relative z-10">คำร้องรอรับเรื่อง</h3>
                 <p class="text-3xl font-bold text-white relative z-10" id="kpiBroken">-</p>
             </div>
             <!-- Card 3 -->
@@ -160,14 +161,14 @@
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr>
-                            <th class="ps-4">เลขอ้างอิง</th>
+                            <th class="ps-4 text-center" style="min-width:220px;">จัดการ</th>
+                            <th>เลขอ้างอิง</th>
                             <th>ผู้แจ้ง</th>
                             <th>สาเหตุ</th>
                             <th>ที่อยู่ผู้แจ้ง</th>
                             <th>วันที่แจ้ง</th>
                             <th>ช่างซ่อม</th>
                             <th>สถานะ</th>
-                            <th class="pe-4 text-center">จัดการ</th>
                         </tr>
                     </thead>
                     <tbody id="repairTableBody">
@@ -356,9 +357,6 @@ document.addEventListener('DOMContentLoaded', () => { loadData(); });
 
 async function loadData() {
     try {
-        let dashRes = null;
-        try { dashRes = await fetch(API + '/dashboard').then(r=>r.json()); } catch(e) {}
-
         let staffRes = [];
         if (supabaseClient) {
             const { data } = await supabaseClient.from('electric_staff').select('*').order('name');
@@ -378,17 +376,42 @@ async function loadData() {
         }
         staffList = staffRes;
         itemsList = itemsRes;
-        if (dashRes) {
-            document.getElementById('kpiTotalPoles').textContent = dashRes.totalPoles;
-            document.getElementById('kpiBroken').textContent = dashRes.brokenPoles;
-            document.getElementById('kpiBrokenBadge').textContent = dashRes.pendingRepairs + ' งานค้าง';
-            document.getElementById('kpiPending').textContent = dashRes.pendingRepairs + dashRes.inProgressRepairs;
-            document.getElementById('kpiCompleted').textContent = dashRes.completedRepairs;
+
+        // === KPI: ดึงจาก Supabase โดยตรง ===
+        if (supabaseClient) {
+            // นับสถานะจาก electric_repairs
+            const { data: allRepairs } = await supabaseClient.from('electric_repairs').select('status');
+            if (allRepairs) {
+                const total = allRepairs.length;
+                const pending = allRepairs.filter(r => r.status === 'pending').length;
+                const accepted = allRepairs.filter(r => r.status === 'accepted').length;
+                const inProgress = allRepairs.filter(r => r.status === 'in_progress').length;
+                const completed = allRepairs.filter(r => r.status === 'completed').length;
+
+                document.getElementById('kpiTotalPoles').textContent = total.toLocaleString();
+                document.getElementById('kpiBroken').textContent = pending;
+                document.getElementById('kpiBrokenBadge').textContent = pending + ' รายการ';
+                document.getElementById('kpiPending').textContent = inProgress + accepted;
+                document.getElementById('kpiCompleted').textContent = completed;
+            }
+        } else {
+            // Fallback: ดึงจาก API เดิม
+            try {
+                const dashRes = await fetch(API + '/dashboard').then(r=>r.json());
+                if (dashRes) {
+                    document.getElementById('kpiTotalPoles').textContent = dashRes.totalPoles;
+                    document.getElementById('kpiBroken').textContent = dashRes.brokenPoles;
+                    document.getElementById('kpiBrokenBadge').textContent = dashRes.pendingRepairs + ' งานค้าง';
+                    document.getElementById('kpiPending').textContent = dashRes.pendingRepairs + dashRes.inProgressRepairs;
+                    document.getElementById('kpiCompleted').textContent = dashRes.completedRepairs;
+                }
+            } catch(e) {}
         }
+
         // Populate staff dropdown
         const sel = document.getElementById('rdStaff');
         sel.innerHTML = '<option value="">-- เลือก --</option>' + staffList.map(s => `<option value="${s.id}">${s.name} (${s.position})</option>`).join('');
-    } catch(e) { console.warn('API not available, using static data'); }
+    } catch(e) { console.warn('loadData error:', e); }
     loadRepairs();
 }
 
@@ -439,7 +462,8 @@ async function loadRepairs() {
         if (r.status === 'cancelled') statusBadgeClass = 'badge bg-danger bg-opacity-10 text-danger';
 
         return `<tr>
-            <td class="ps-4 fw-bold text-primary">
+            <td class="ps-4 text-center">${actions} ${inspectBtn}</td>
+            <td class="fw-bold text-primary">
                 ${r.complaint_id || r.id}
                 <div class="text-xs text-muted fw-normal mt-1"><i class="fa-solid fa-bolt text-warning me-1"></i>เสา: ${r.pole_id || '-'}</div>
             </td>
@@ -449,7 +473,6 @@ async function loadRepairs() {
             <td class="text-xs text-muted">${date}</td>
             <td>${r.staff_name || '<span class=text-muted>-</span>'}</td>
             <td><span class="${statusBadgeClass}">${statusLabels[r.status] || r.status}</span></td>
-            <td class="pe-4 text-center">${actions} ${inspectBtn}</td>
         </tr>`;
     }).join('');
 }
@@ -801,5 +824,6 @@ async function generateAndSavePDF(id, r) {
     }
 }
 </script>
+    <script src="assets/js/responsive.js"></script>
 </body>
 </html>
