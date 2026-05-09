@@ -47,10 +47,10 @@ a { text-decoration: none; }
 #sidebar {
     min-width: 255px;
     max-width: 255px;
-    min-height: 100vh;
-    position: sticky;
-    top: 0;
     height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
     overflow-y: auto;
     background: var(--sidebar-bg) !important;
     transition: all 0.3s cubic-bezier(.4,0,.2,1);
@@ -141,6 +141,7 @@ a { text-decoration: none; }
 #content {
     flex: 1;
     min-width: 0;
+    margin-left: 255px;
     transition: all 0.3s;
     display: flex;
     flex-direction: column;
@@ -376,6 +377,7 @@ a { text-decoration: none; }
 
     #content {
         width: 100%;
+        margin-left: 0;
     }
 }
 
