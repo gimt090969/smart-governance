@@ -28,7 +28,7 @@
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-sm btn-outline-success" onclick="showToast('Export Excel สำเร็จ','success')"><i class="fa-solid fa-file-excel me-1"></i>Excel</button>
-                <button class="btn btn-sm btn-outline-danger" onclick="showToast('Export PDF สำเร็จ','success')"><i class="fa-solid fa-file-pdf me-1"></i>PDF</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="exportCurrentTabPDF()"><i class="fa-solid fa-file-pdf me-1"></i>PDF</button>
             </div>
         </div>
 
@@ -47,6 +47,7 @@
                     <div class="d-flex align-items-center gap-2">
                         <label class="form-label mb-0 text-muted" style="white-space: nowrap;">เลือกวันที่:</label>
                         <input type="date" id="filterDate" class="form-control form-control-sm" style="width: 150px;" onchange="renderReports()">
+                        <button class="btn btn-sm btn-danger" onclick="exportDailyPDF()" title="พิมพ์ PDF รายวัน"><i class="fa-solid fa-file-pdf me-1"></i>PDF</button>
                     </div>
                 </div>
                 <div class="row g-3 mb-4">
@@ -74,6 +75,7 @@
                             <option value="2568">2568</option>
                             <option value="2569">2569</option>
                         </select>
+                        <button class="btn btn-sm btn-danger" onclick="exportMonthlyPDF()" title="พิมพ์ PDF รายเดือน"><i class="fa-solid fa-file-pdf me-1"></i>PDF</button>
                     </div>
                 </div>
                 <div class="card mb-4"><div class="card-body"><canvas id="monthlyChart" height="300"></canvas></div></div>
@@ -99,6 +101,7 @@
 <script src="assets/js/waste-payment.js"></script>
 <script src="assets/js/responsive.js"></script>
 <script src="assets/js/waste-receipt.js"></script>
+<script src="assets/js/waste-reports-pdf.js"></script>
 <script>
 var monthlyChartInstance = null;
 var yearlyChartInstance = null;
