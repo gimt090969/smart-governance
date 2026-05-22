@@ -11,7 +11,9 @@ let supabaseClient = null;
 
 // Initialize only if the library is loaded and keys are provided
 if (typeof window.supabase !== 'undefined' && SUPABASE_URL) {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' }) }
+    });
     console.log("Supabase Client Initialized.");
 } else {
     console.warn("Supabase library not loaded or credentials not provided. Running in UI-only mode.");

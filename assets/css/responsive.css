@@ -323,13 +323,7 @@ img {
 
 /* Hamburger button visibility */
 #sidebarCollapse {
-    display: none;
-}
-
-@media (max-width: 991.98px) {
-    #sidebarCollapse {
-        display: flex !important;
-    }
+    display: flex;
 }
 
 /* ========================================

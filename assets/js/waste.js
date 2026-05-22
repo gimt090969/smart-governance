@@ -166,6 +166,8 @@ let stateCustomers = [];
 let statePayments = [];
 let stateMonthlyStatus = null;
 let stateStaff = [];
+let stateRegisterReqs = [];
+let stateCancelReqs = [];
 
 // Fallback logic for Fee Types
 async function fetchWasteFeeTypes() {
@@ -337,7 +339,7 @@ async function fetchMonthlyStatus() {
         const { data, error } = await supabaseClient
             .from('waste_monthly_status')
             .select('*');
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
             // Convert flat rows → nested object: { WC001: { '2568': { oct:'paid', ... } } }
             const ms = {};
             data.forEach(row => {
@@ -417,7 +419,7 @@ async function fetchWasteStaff() {
             .from('waste_staff')
             .select('*')
             .order('id', { ascending: true });
-        if (!error && data && data.length > 0) {
+        if (!error && data) {
             stateStaff = data;
             saveWasteData('staff', data);
             return data;
@@ -431,10 +433,125 @@ async function fetchWasteStaff() {
 
 function getWasteStaff() { return stateStaff.length > 0 ? stateStaff : getWasteData('staff'); }
 function saveWasteStaff(d) { saveWasteData('staff', d); stateStaff = d; }
-function getRegisterRequests() { return getWasteData('registerReqs'); }
-function saveRegisterRequests(d) { saveWasteData('registerReqs', d); }
-function getCancelRequests() { return getWasteData('cancelReqs'); }
-function saveCancelRequests(d) { saveWasteData('cancelReqs', d); }
+
+// GAS URL สำหรับอัปโหลดรูปภาพพนักงาน (ให้ User นำ Web App URL มาใส่ที่นี่)
+const GAS_STAFF_IMG_URL = 'https://script.google.com/macros/s/AKfycbwlba_trt6vEhQX64vZUZ2Ay1JTKKXjccI86IRIYRcMAK1cf9j9CT_jBcnyygqeS9Hr/exec';
+
+async function uploadWasteStaffImage(base64Data, filename) {
+    if (!GAS_STAFF_IMG_URL) {
+        console.warn('GAS_STAFF_IMG_URL is empty, skipping upload');
+        return null;
+    }
+    try {
+        const res = await fetch(GAS_STAFF_IMG_URL, {
+            method: 'POST',
+            body: JSON.stringify({ base64: base64Data, filename: filename })
+        });
+        const data = await res.json();
+        if (data.success) {
+            return data.imageUrl;
+        } else {
+            console.error('GAS Upload Error:', data.error);
+            return null;
+        }
+    } catch (e) {
+        console.error('Upload catch error:', e);
+        return null;
+    }
+}
+
+async function saveWasteStaffDB(data) {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        // อัปเดตข้อมูลใน Supabase
+        // ทำการลบค่าที่เป็น null หรือ undefined ออกก่อนส่ง (กันพลาด)
+        Object.keys(data).forEach(key => { if (data[key] === undefined) delete data[key]; });
+        
+        const { error } = await supabaseClient.from('waste_staff').upsert(data);
+        if (error) {
+            console.error('Error saving waste_staff to Supabase', error);
+            Swal.fire('เกิดข้อผิดพลาดฐานข้อมูล', error.message || JSON.stringify(error), 'error');
+            return false;
+        }
+    }
+    // Update local cache
+    const idx = stateStaff.findIndex(s => s.id === data.id);
+    if (idx >= 0) stateStaff[idx] = data;
+    else stateStaff.push(data);
+    saveWasteStaff(stateStaff);
+    return true;
+}
+
+async function deleteWasteStaffDB(id) {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const { error } = await supabaseClient.from('waste_staff').delete().eq('id', id);
+        if (error) {
+            console.error('Error deleting waste_staff from Supabase', error);
+            showToast('เกิดข้อผิดพลาดในการลบข้อมูล', 'danger');
+            return false;
+        }
+    }
+    stateStaff = stateStaff.filter(s => s.id !== id);
+    saveWasteStaff(stateStaff);
+    return true;
+}
+
+async function fetchRegisterRequestsDB() {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const { data, error } = await supabaseClient.from('waste_register_requests').select('*').order('created_at', {ascending: false});
+        if (!error && data) {
+            stateRegisterReqs = data;
+            return data;
+        } else {
+            console.warn('Supabase fetch register reqs error', error);
+        }
+    }
+    stateRegisterReqs = getWasteData('registerReqs');
+    return stateRegisterReqs;
+}
+
+function getRegisterRequests() { return stateRegisterReqs.length > 0 ? stateRegisterReqs : getWasteData('registerReqs'); }
+
+async function saveRegisterRequestDB(data) {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const { error } = await supabaseClient.from('waste_register_requests').upsert(data);
+        if (error) console.error('Error saving register req to Supabase:', error);
+    }
+    const reqs = getWasteData('registerReqs');
+    const idx = reqs.findIndex(r => r.id === data.id);
+    if (idx >= 0) reqs[idx] = data; else reqs.push(data);
+    saveWasteData('registerReqs', reqs);
+    await fetchRegisterRequestsDB();
+}
+
+function saveRegisterRequests(d) { saveWasteData('registerReqs', d); stateRegisterReqs = d; }
+function getCancelRequests() { return stateCancelReqs.length > 0 ? stateCancelReqs : getWasteData('cancelReqs'); }
+function saveCancelRequests(d) { saveWasteData('cancelReqs', d); stateCancelReqs = d; }
+
+async function fetchCancelRequestsDB() {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const { data, error } = await supabaseClient.from('waste_cancel_requests').select('*').order('created_at', {ascending: false});
+        if (!error && data) {
+            stateCancelReqs = data;
+            return data;
+        } else {
+            console.warn('Supabase fetch cancel reqs error', error);
+        }
+    }
+    stateCancelReqs = getWasteData('cancelReqs');
+    return stateCancelReqs;
+}
+
+async function saveCancelRequestDB(data) {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const { error } = await supabaseClient.from('waste_cancel_requests').upsert(data);
+        if (error) console.error('Error saving cancel req to Supabase:', error);
+    }
+    const reqs = getWasteData('cancelReqs');
+    const idx = reqs.findIndex(r => r.id === data.id);
+    if (idx >= 0) reqs[idx] = data; else reqs.push(data);
+    saveWasteData('cancelReqs', reqs);
+    await fetchCancelRequestsDB();
+}
 
 // ============================================
 // UTILITY FUNCTIONS
@@ -519,18 +636,16 @@ function getLastPaidMonth(customerStatus) {
 function getWasteDashboardStats() {
     const customers = getWasteCustomers();
     const active = customers.filter(c => c.status === 'active');
-    const ms = getMonthlyStatus();
+    const ms = typeof getMonthlyStatus === 'function' ? getMonthlyStatus() : {};
     const payments = getWastePayments();
     const regReqs = getRegisterRequests();
     const canReqs = getCancelRequests();
     const now = new Date();
-    const thisMonth = payments.filter(p => {
-        const pd = new Date(p.date);
-        return pd.getMonth() === now.getMonth() && pd.getFullYear() === now.getFullYear();
-    });
-    const thisYear = payments.filter(p => new Date(p.date).getFullYear() === now.getFullYear());
-
+    
     let paidCount = 0, unpaidCount = 0;
+    let revenueThisMonth = 0;
+    let revenueThisYear = 0;
+    
     const currentYear = now.getMonth() >= 9 ? String(now.getFullYear() + 543 + 1) : String(now.getFullYear() + 543);
     const currentMonthKey = WASTE_MONTH_KEYS[now.getMonth() >= 9 ? now.getMonth() - 9 : now.getMonth() + 3];
 
@@ -543,16 +658,27 @@ function getWasteDashboardStats() {
         
         const s = customerStatus[currentYear] || {};
         
-        if (s[currentMonthKey] === 'paid') paidCount++;
-        else unpaidCount++;
+        const fee = Number(c.fee) || 0;
+        
+        if (s[currentMonthKey] === 'paid') {
+            paidCount++;
+            revenueThisMonth += fee;
+        } else {
+            unpaidCount++;
+        }
+        
+        // Calculate total revenue for this fiscal year for this customer
+        Object.keys(s).forEach(mk => {
+            if (s[mk] === 'paid') revenueThisYear += fee;
+        });
     });
 
     return {
         totalHouseholds: active.length,
         paidThisMonth: paidCount,
         unpaidThisMonth: unpaidCount,
-        revenueThisMonth: thisMonth.reduce((s, p) => s + p.amount, 0),
-        revenueThisYear: thisYear.reduce((s, p) => s + p.amount, 0),
+        revenueThisMonth: revenueThisMonth,
+        revenueThisYear: revenueThisYear,
         newRequests: regReqs.filter(r => r.status === 'pending').length,
         cancelRequests: canReqs.filter(r => r.status === 'pending').length,
         recentPayments: payments.slice(0, 10)
@@ -576,12 +702,20 @@ function getDebtBadgeLabel(count) {
 
 // Chart helper for monthly revenue
 function getMonthlyRevenueData() {
-    const payments = getWastePayments();
+    const ms = typeof getMonthlyStatus === 'function' ? getMonthlyStatus() : {};
+    const customers = typeof getWasteCustomers === 'function' ? getWasteCustomers() : [];
     const data = new Array(12).fill(0);
-    payments.forEach(p => {
-        const d = new Date(p.date);
-        const mi = d.getMonth() >= 9 ? d.getMonth() - 9 : d.getMonth() + 3;
-        if (mi >= 0 && mi < 12) data[mi] += p.amount;
+    const currentYear = getCurrentFiscalYear();
+
+    Object.keys(ms).forEach(cid => {
+        const cust = customers.find(c => c.id === cid);
+        const fee = cust ? (Number(cust.fee) || 0) : 0;
+        const yearData = ms[cid][currentYear];
+        if (yearData) {
+            WASTE_MONTH_KEYS.forEach((mk, i) => {
+                if (yearData[mk] === 'paid') data[i] += fee;
+            });
+        }
     });
     return data;
 }

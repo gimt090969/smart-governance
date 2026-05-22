@@ -223,3 +223,320 @@ async function processOnlineRejection(transactionId, reason) {
     }
     return true;
 }
+
+// ============================================
+// CANCEL AND DELETE PAYMENTS (Async + Supabase)
+// ============================================
+async function cancelWastePayment(paymentId, reason) {
+    const payments = getWastePayments();
+    const p = payments.find(x => x.id === paymentId);
+    if (!p) return null;
+
+    // 1. Update payment status
+    p.status = 'cancelled';
+    p.reject_reason = reason;
+    await saveWastePaymentDB(p);
+
+    // 2. Revert monthly status
+    const months = Array.isArray(p.months_paid) ? p.months_paid : [p.months_paid];
+    const fiscalYear = p.fiscal_year || getCurrentFiscalYear();
+    
+    for (const ml of months) {
+        if (!ml) continue;
+        let idx = WASTE_MONTHS.indexOf(ml);
+        if (idx === -1) {
+            idx = WASTE_MONTHS.findIndex(m => ml.startsWith(m));
+        }
+        if (idx >= 0) {
+            await saveMonthlyStatusDB(p.customer_id, fiscalYear, WASTE_MONTH_KEYS[idx], 'unpaid', null);
+        }
+    }
+    return p;
+}
+
+async function deleteWastePayment(paymentId) {
+    const payments = getWastePayments();
+    const p = payments.find(x => x.id === paymentId);
+    if (!p) return false;
+
+    // 1. Revert monthly status FIRST
+    const months = Array.isArray(p.months_paid) ? p.months_paid : [p.months_paid];
+    const fiscalYear = p.fiscal_year || getCurrentFiscalYear();
+    
+    for (const ml of months) {
+        if (!ml) continue;
+        let idx = WASTE_MONTHS.indexOf(ml);
+        if (idx === -1) {
+            idx = WASTE_MONTHS.findIndex(m => ml.startsWith(m));
+        }
+        if (idx >= 0) {
+            await saveMonthlyStatusDB(p.customer_id, fiscalYear, WASTE_MONTH_KEYS[idx], 'unpaid', null);
+        }
+    }
+
+    // 2. Delete payment from Supabase
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const { error } = await supabaseClient
+            .from('waste_payments')
+            .delete()
+            .eq('id', paymentId);
+        if (error) {
+            console.error('Error deleting payment from Supabase:', error);
+            return false;
+        }
+    }
+
+    // 3. Delete from local cache
+    const updatedPayments = payments.filter(x => x.id !== paymentId);
+    saveWastePayments(updatedPayments);
+
+    return true;
+}
+
+// ============================================
+// CHAT SYSTEM (ADMIN)
+// ============================================
+let adminChatSubscription = null;
+let activeAdminChatRoomId = null;
+let allChatRooms = {}; 
+
+async function initAdminChat() {
+    if (typeof supabaseClient === 'undefined' || !supabaseClient) return;
+
+    try {
+        const { data, error } = await supabaseClient
+            .from('waste_chats')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(200);
+            
+        if (!error && data) {
+            allChatRooms = {};
+            [...data].reverse().forEach(msg => {
+                if (!allChatRooms[msg.room_id]) {
+                    allChatRooms[msg.room_id] = { messages: [], unreadCount: 0, latestMsg: null, senderName: msg.sender_name };
+                }
+                allChatRooms[msg.room_id].messages.push(msg);
+                allChatRooms[msg.room_id].latestMsg = msg;
+                if (msg.sender_type === 'citizen' && !msg.is_read) {
+                    allChatRooms[msg.room_id].unreadCount++;
+                }
+            });
+            renderAdminChatRooms();
+        }
+        
+        // Subscribe to all incoming chat messages
+        if (!adminChatSubscription) {
+            adminChatSubscription = supabaseClient
+                .channel('admin_global_chat')
+                .on('postgres_changes', { 
+                    event: 'INSERT', 
+                    schema: 'public', 
+                    table: 'waste_chats'
+                }, payload => {
+                    const newMsg = payload.new;
+                    handleNewAdminMessage(newMsg);
+                })
+                .subscribe();
+        }
+    } catch(err) {
+        console.error("Admin chat init error:", err);
+    }
+}
+
+function handleNewAdminMessage(msg) {
+    if (!allChatRooms[msg.room_id]) {
+        allChatRooms[msg.room_id] = { messages: [], unreadCount: 0, latestMsg: null, senderName: msg.sender_name };
+    }
+    
+    // Avoid duplicate if sent by admin
+    const isDuplicate = allChatRooms[msg.room_id].messages.some(m => m.id === msg.id);
+    if (!isDuplicate) {
+        allChatRooms[msg.room_id].messages.push(msg);
+    }
+    
+    allChatRooms[msg.room_id].latestMsg = msg;
+    
+    // Update unread count if it's from citizen and not the currently active room
+    if (msg.sender_type === 'citizen' && msg.room_id !== activeAdminChatRoomId) {
+        allChatRooms[msg.room_id].unreadCount++;
+    } else if (msg.sender_type === 'citizen' && msg.room_id === activeAdminChatRoomId) {
+        // Auto mark as read if room is open
+        markRoomAsRead(msg.room_id);
+    }
+
+    renderAdminChatRooms();
+    
+    if (activeAdminChatRoomId === msg.room_id) {
+        renderAdminChatMessages();
+    }
+}
+
+function renderAdminChatRooms() {
+    const listEl = document.getElementById('adminChatList');
+    if (!listEl) return;
+    
+    const rooms = Object.keys(allChatRooms).map(roomId => {
+        return { roomId, ...allChatRooms[roomId] };
+    });
+    
+    rooms.sort((a, b) => {
+        const dateA = a.latestMsg ? new Date(a.latestMsg.created_at) : new Date(0);
+        const dateB = b.latestMsg ? new Date(b.latestMsg.created_at) : new Date(0);
+        return dateB - dateA;
+    });
+    
+    const totalEl = document.getElementById('totalActiveChats');
+    if (totalEl) totalEl.innerText = rooms.length;
+    
+    let totalUnread = 0;
+    
+    if (rooms.length === 0) {
+        listEl.innerHTML = '<div class="text-center py-5 text-muted">ยังไม่มีรายการสนทนา</div>';
+    } else {
+        listEl.innerHTML = rooms.map(r => {
+            totalUnread += r.unreadCount;
+            const msgPreview = r.latestMsg ? r.latestMsg.message.substring(0, 30) + (r.latestMsg.message.length > 30 ? '...' : '') : '';
+            const isActive = r.roomId === activeAdminChatRoomId ? 'bg-primary-subtle' : 'bg-white';
+            return `
+            <div class="p-3 border-bottom ${isActive}" style="cursor:pointer; transition:0.2s;" onclick="selectAdminChatRoom('${r.roomId}')">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="text-dark">${r.senderName}</strong>
+                    ${r.unreadCount > 0 ? `<span class="badge bg-danger rounded-pill">${r.unreadCount}</span>` : ''}
+                </div>
+                <div class="text-muted text-sm text-truncate">${r.latestMsg && r.latestMsg.sender_type==='official'? '<i class="fa-solid fa-reply me-1"></i>':''}${msgPreview}</div>
+            </div>`;
+        }).join('');
+    }
+    
+    // Update global badge
+    const badge = document.getElementById('adminGlobalUnreadBadge');
+    const fabBadge = document.getElementById('adminFabUnreadBadge');
+    
+    if (totalUnread > 0) {
+        if (badge) { badge.style.display = 'inline-block'; badge.innerText = totalUnread; }
+        if (fabBadge) { fabBadge.style.display = 'inline-block'; fabBadge.innerText = totalUnread; }
+    } else {
+        if (badge) badge.style.display = 'none';
+        if (fabBadge) fabBadge.style.display = 'none';
+    }
+}
+
+function selectAdminChatRoom(roomId) {
+    activeAdminChatRoomId = roomId;
+    const room = allChatRooms[roomId];
+    if (room) {
+        const header = document.getElementById('adminChatHeader');
+        if (header) {
+            header.innerHTML = `
+                <h6 class="mb-0 fw-bold"><i class="fa-regular fa-user-circle me-2 text-primary"></i>${room.senderName}</h6>
+                <span class="ms-auto text-xs text-muted">Room: ${roomId}</span>
+            `;
+        }
+        const inputArea = document.getElementById('adminChatInputArea');
+        if (inputArea) inputArea.style.setProperty('display', 'flex', 'important');
+        
+        markRoomAsRead(roomId);
+        renderAdminChatRooms();
+        renderAdminChatMessages();
+    }
+}
+
+function renderAdminChatMessages() {
+    const area = document.getElementById('adminChatMessagesArea');
+    if (!area || !activeAdminChatRoomId) return;
+    
+    const messages = allChatRooms[activeAdminChatRoomId].messages;
+    
+    area.innerHTML = messages.map(msg => {
+        const timeStr = new Date(msg.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        const isOfficial = msg.sender_type === 'official';
+        
+        const bg = isOfficial ? '#06C755' : '#f1f5f9';
+        const color = isOfficial ? 'white' : '#334155';
+        const align = isOfficial ? 'flex-end' : 'flex-start';
+        const borderRadius = isOfficial ? '16px 16px 4px 16px' : '16px 16px 16px 4px';
+        
+        return `
+        <div style="display:flex; flex-direction:column; align-self: ${align}; max-width:75%;">
+            <div style="background:${bg}; color:${color}; padding:10px 14px; border-radius:${borderRadius}; font-size:0.9rem; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                ${msg.message}
+            </div>
+            <div style="font-size:0.65rem; color:#94a3b8; margin-top:4px; text-align:${isOfficial?'right':'left'}">${timeStr}</div>
+        </div>`;
+    }).join('');
+    
+    area.scrollTop = area.scrollHeight;
+}
+
+function handleAdminChatKeypress(event) {
+    if (event.key === 'Enter') {
+        sendAdminMessage();
+    }
+}
+
+async function sendAdminMessage() {
+    const input = document.getElementById('adminChatInput');
+    if (!input) return;
+    const msgText = input.value.trim();
+    
+    if (!msgText || !activeAdminChatRoomId) return;
+    
+    input.value = '';
+    
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('waste_chats')
+                .insert([{
+                    room_id: activeAdminChatRoomId,
+                    sender_type: 'official',
+                    sender_name: 'เจ้าหน้าที่กองคลัง',
+                    message: msgText,
+                    is_read: true // Read by sender natively
+                }])
+                .select();
+                
+            if (!error && data && data.length > 0) {
+                const newMsg = data[0];
+                const isDuplicate = allChatRooms[activeAdminChatRoomId].messages.some(m => m.id === newMsg.id);
+                if (!isDuplicate) {
+                    allChatRooms[activeAdminChatRoomId].messages.push(newMsg);
+                    allChatRooms[activeAdminChatRoomId].latestMsg = newMsg;
+                    renderAdminChatRooms();
+                    renderAdminChatMessages();
+                }
+            }
+        } catch(err) {
+            console.error("Send admin message error:", err);
+            if (typeof showToast !== 'undefined') showToast('ไม่สามารถส่งข้อความได้', 'danger');
+        }
+    }
+}
+
+async function markRoomAsRead(roomId) {
+    if (allChatRooms[roomId] && allChatRooms[roomId].unreadCount > 0) {
+        allChatRooms[roomId].unreadCount = 0;
+        
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+            try {
+                await supabaseClient
+                    .from('waste_chats')
+                    .update({ is_read: true })
+                    .eq('room_id', roomId)
+                    .eq('sender_type', 'citizen')
+                    .eq('is_read', false);
+            } catch(e) {
+                console.error("Mark read error", e);
+            }
+        }
+    }
+}
+
+// Ensure chat init when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    // Wait for Supabase to be ready
+    setTimeout(() => {
+        initAdminChat();
+    }, 1500);
+});

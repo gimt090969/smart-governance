@@ -150,34 +150,27 @@ function exportMonthlyPDF() {
     var filterYear = document.getElementById('filterYear').value;
     if (!filterYear) { Swal.fire('กรุณาเลือกปีงบประมาณ', '', 'warning'); return; }
 
-    var payments = getWastePayments();
-    var monthlyPayments = payments.filter(function(p) {
-        if (p.status !== 'completed') return false;
-        if (p.fiscal_year) return String(p.fiscal_year) === filterYear;
-        var d = new Date(p.date);
-        var fy = d.getMonth() >= 9 ? d.getFullYear() + 543 + 1 : d.getFullYear() + 543;
-        return String(fy) === filterYear;
-    });
-
-    var grandTotal = monthlyPayments.reduce(function(s,p){ return s + p.amount; }, 0);
+    var msData = typeof getMonthlyStatus === 'function' ? getMonthlyStatus() : {};
+    var customers = typeof getWasteCustomers === 'function' ? getWasteCustomers() : [];
 
     // Build monthly rows
     var rowsHtml = '';
-    var totalCount = 0, totalCash = 0, totalTransfer = 0, totalSum = 0;
+    var totalCount = 0, totalSum = 0;
 
     WASTE_MONTHS.forEach(function(m, i) {
-        var mp = monthlyPayments.filter(function(p) {
-            var d = new Date(p.date);
-            var mi = d.getMonth() >= 9 ? d.getMonth() - 9 : d.getMonth() + 3;
-            return mi === i;
-        });
-        var monthTotal = mp.reduce(function(s,p){ return s + p.amount; }, 0);
-        var cash = mp.filter(function(p){ return p.method === 'เงินสด'; }).reduce(function(s,p){ return s + p.amount; }, 0);
-        var transfer = mp.filter(function(p){ return p.method !== 'เงินสด'; }).reduce(function(s,p){ return s + p.amount; }, 0);
+        var mk = WASTE_MONTH_KEYS[i];
+        var monthTotal = 0;
+        var monthPayers = 0;
 
-        totalCount += mp.length;
-        totalCash += cash;
-        totalTransfer += transfer;
+        Object.keys(msData).forEach(function(cid) {
+            if (msData[cid][filterYear] && msData[cid][filterYear][mk] === 'paid') {
+                var cust = customers.find(function(c){ return c.id === cid; });
+                monthTotal += cust ? (Number(cust.fee) || 0) : 0;
+                monthPayers++;
+            }
+        });
+
+        totalCount += monthPayers;
         totalSum += monthTotal;
 
         var fyNum = parseInt(filterYear);
@@ -187,9 +180,7 @@ function exportMonthlyPDF() {
         rowsHtml += '<tr>' +
             '<td class="text-center">' + (i + 1) + '</td>' +
             '<td>' + fullMonthName + '</td>' +
-            '<td class="text-center">' + mp.length + '</td>' +
-            '<td class="text-right">' + fmtMoneyPDF(cash) + '</td>' +
-            '<td class="text-right">' + fmtMoneyPDF(transfer) + '</td>' +
+            '<td class="text-center">' + monthPayers + '</td>' +
             '<td class="text-right fw-bold">' + fmtMoneyPDF(monthTotal) + '</td>' +
             '</tr>';
     });
@@ -199,8 +190,6 @@ function exportMonthlyPDF() {
         '<td></td>' +
         '<td class="fw-bold">รวมทั้งปี</td>' +
         '<td class="text-center fw-bold">' + totalCount + '</td>' +
-        '<td class="text-right">' + fmtMoneyPDF(totalCash) + '</td>' +
-        '<td class="text-right">' + fmtMoneyPDF(totalTransfer) + '</td>' +
         '<td class="text-right fw-bold">' + fmtMoneyPDF(totalSum) + '</td>' +
         '</tr>';
 
@@ -211,7 +200,7 @@ function exportMonthlyPDF() {
         '<div class="report-header">' +
         '<h1>รายงานสรุปการรับชำระค่าขยะรายเดือน</h1>' +
         '<p>ปีงบประมาณ พ.ศ. ' + filterYear + '</p>' +
-        '<p class="total-highlight">ยอดรวมทั้งปี ' + fmtMoneyPDF(grandTotal) + ' บาท</p>' +
+        '<p class="total-highlight">ยอดรวมทั้งปี ' + fmtMoneyPDF(totalSum) + ' บาท</p>' +
         '</div>' +
         '<div class="print-actions">' +
         '<button class="btn-print" onclick="window.print()"><i class="fa-solid fa-print"></i> พิมพ์ / บันทึก PDF</button>' +
@@ -220,7 +209,7 @@ function exportMonthlyPDF() {
         '<table>' +
         '<thead><tr>' +
         '<th>ลำดับ</th><th>เดือน</th><th>จำนวนผู้ชำระ</th>' +
-        '<th>เงินสด (บาท)</th><th>โอน/QR (บาท)</th><th>ยอดรวม (บาท)</th>' +
+        '<th>ยอดรวม (บาท)</th>' +
         '</tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody>' +
         '</table>' +
@@ -236,13 +225,102 @@ function exportMonthlyPDF() {
 }
 
 // ============================================
+// ALL REVENUE PDF REPORT
+// ============================================
+function exportAllPDF() {
+    var payments = getWastePayments();
+    var customers = getWasteCustomers();
+    var allPayments = payments.filter(function(p) { return p.status === 'completed'; });
+
+    var totalAmount = allPayments.reduce(function(s,p){ return s + p.amount; }, 0);
+
+    // Build table rows
+    var rowsHtml = '';
+    var sumDebt = 0, sumRegular = 0, sumAdvance = 0, sumTotal = 0;
+
+    if (allPayments.length === 0) {
+        rowsHtml = '<tr><td colspan="10" class="text-center" style="padding:30px;color:#999;">ไม่มีรายการชำระในระบบ</td></tr>';
+    } else {
+        allPayments.forEach(function(p, idx) {
+            var cust = customers.find(function(c){ return c.id === p.customer_id; });
+            var houseNo = p.house_no || (cust ? cust.house_no : '-');
+            var moo = cust ? cust.moo : '-';
+            var monthsPaid = Array.isArray(p.months_paid) ? p.months_paid : [p.months_paid || '-'];
+            var feePerMonth = cust ? cust.fee : (monthsPaid.length > 0 ? Math.round(p.amount / monthsPaid.length) : p.amount);
+
+            var debtAmt = 0;
+            var regularAmt = feePerMonth * monthsPaid.length;
+            var advanceAmt = 0;
+            var rowTotal = p.amount;
+
+            sumDebt += debtAmt;
+            sumRegular += regularAmt;
+            sumAdvance += advanceAmt;
+            sumTotal += rowTotal;
+
+            rowsHtml += '<tr>' +
+                '<td class="text-center">' + (idx + 1) + '</td>' +
+                '<td>' + p.date + '</td>' +
+                '<td>' + (p.receipt_no || '-') + '</td>' +
+                '<td>' + (p.customer_name || '-') + '</td>' +
+                '<td class="text-center">' + houseNo + '</td>' +
+                '<td class="text-center">' + moo + '</td>' +
+                '<td class="text-right">' + fmtMoneyPDF(debtAmt) + '</td>' +
+                '<td class="text-right">' + fmtMoneyPDF(regularAmt) + '</td>' +
+                '<td class="text-right">' + fmtMoneyPDF(advanceAmt) + '</td>' +
+                '<td class="text-right fw-bold">' + fmtMoneyPDF(rowTotal) + '</td>' +
+                '</tr>';
+        });
+
+        // Summary row
+        rowsHtml += '<tr class="summary-row">' +
+            '<td colspan="6" class="text-center fw-bold">รวม</td>' +
+            '<td class="text-right">' + fmtMoneyPDF(sumDebt) + '</td>' +
+            '<td class="text-right">' + fmtMoneyPDF(sumRegular) + '</td>' +
+            '<td class="text-right">' + fmtMoneyPDF(sumAdvance) + '</td>' +
+            '<td class="text-right fw-bold">' + fmtMoneyPDF(sumTotal) + '</td>' +
+            '</tr>';
+    }
+
+    var html = '<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>รายงานค่าขยะทั้งหมด</title>' +
+        getPrintStyles() + '</head><body>' +
+        '<div class="report-header">' +
+        '<h1>ข้อมูลการชำระค่าขยะทั้งหมดในระบบ</h1>' +
+        '<p class="total-highlight">จำนวนเงินที่ชำระทั้งหมด ' + fmtMoneyPDF(totalAmount) + ' บาท</p>' +
+        '</div>' +
+        '<div class="print-actions">' +
+        '<button class="btn-print" onclick="window.print()"><i class="fa-solid fa-print"></i> พิมพ์ / บันทึก PDF</button>' +
+        '<button class="btn-close-win" onclick="window.close()">ปิด</button>' +
+        '</div>' +
+        '<table>' +
+        '<thead><tr>' +
+        '<th>ลำดับ</th><th>วันที่</th><th>เลขที่ใบเสร็จ</th><th>ชื่อลูกค้า</th><th>บ้านเลขที่</th><th>หมู่ที่</th>' +
+        '<th>รับชำระลูก<br>หนี้</th><th>รับปกติ</th><th>รับล่วงหน้า</th><th>รวม</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rowsHtml + '</tbody>' +
+        '</table>' +
+        '<div class="report-footer">เอกสารนี้สร้างโดยระบบ Smart Connect — เทศบาลเมืองบ้านเป็ด</div>' +
+        '</body></html>';
+
+    var w = window.open('', '_blank', 'width=1000,height=700');
+    w.document.write(html);
+    w.document.close();
+    w.onload = function() {
+        setTimeout(function() { w.print(); }, 600);
+    };
+}
+
+// ============================================
 // SMART EXPORT — detect active tab
 // ============================================
 function exportCurrentTabPDF() {
+    var allTab = document.querySelector('#tabAll');
     var dailyTab = document.querySelector('#tabDaily');
     var monthlyTab = document.querySelector('#tabMonthly');
 
-    if (dailyTab && dailyTab.classList.contains('active')) {
+    if (allTab && allTab.classList.contains('active')) {
+        exportAllPDF();
+    } else if (dailyTab && dailyTab.classList.contains('active')) {
         exportDailyPDF();
     } else if (monthlyTab && monthlyTab.classList.contains('active')) {
         exportMonthlyPDF();
@@ -252,13 +330,13 @@ function exportCurrentTabPDF() {
             icon: 'question',
             showCancelButton: true,
             showDenyButton: true,
-            confirmButtonText: 'รายงานรายวัน',
+            confirmButtonText: 'รายงานทั้งหมด',
             denyButtonText: 'รายงานรายเดือน',
             cancelButtonText: 'ยกเลิก',
             confirmButtonColor: '#1a56db',
             denyButtonColor: '#059669'
         }).then(function(result) {
-            if (result.isConfirmed) exportDailyPDF();
+            if (result.isConfirmed) exportAllPDF();
             else if (result.isDenied) exportMonthlyPDF();
         });
     }

@@ -9,6 +9,17 @@
 // =============================================
 const NAV_ITEMS = [
     { href: 'dashboard.html', icon: 'fa-solid fa-chart-pie', label: 'แดชบอร์ด', key: 'dashboard', depts: ['ALL'] },
+    { href: 'digital-data-dashboard.html', icon: 'fa-solid fa-database', label: 'Digital Data Center', key: 'digital-data-dashboard', depts: ['ALL'] },
+    { href: 'digital-data-map.html', icon: 'fa-solid fa-map-location-dot', label: 'GIS Map', key: 'digital-data-map', depts: ['ALL'], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-households.html', icon: 'fa-solid fa-house-chimney', label: 'ครัวเรือน', key: 'digital-data-households', depts: ['ALL'], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-population.html', icon: 'fa-solid fa-users', label: 'ประชากร', key: 'digital-data-population', depts: ['ALL'], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-elderly.html', icon: 'fa-solid fa-person-cane', label: 'ผู้สูงอายุ', key: 'digital-data-elderly', depts: ['ALL'], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-disabled.html', icon: 'fa-solid fa-wheelchair', label: 'ผู้พิการ', key: 'digital-data-disabled', depts: ['ALL'], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-bedridden.html', icon: 'fa-solid fa-bed-pulse', label: 'ผู้ป่วยติดเตียง', key: 'digital-data-bedridden', depts: ['ALL'], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-newborn.html', icon: 'fa-solid fa-baby', label: 'เด็กแรกเกิด', key: 'digital-data-newborn', depts: ['ALL'], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-poor.html', icon: 'fa-solid fa-hand-holding-heart', label: 'ครัวเรือนยากจน', key: 'digital-data-poor', depts: ['ALL'], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-scholars.html', icon: 'fa-solid fa-graduation-cap', label: 'ปราชญ์ชุมชน', key: 'digital-data-scholars', depts: ['ALL'], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-leaders.html', icon: 'fa-solid fa-people-group', label: 'ผู้นำ/อาสาสมัคร', key: 'digital-data-leaders', depts: ['ALL'], parent: 'digital-data-dashboard' },
     { href: 'secretary.html', icon: 'fa-solid fa-building-user', label: 'สำนักปลัด', key: 'secretary', depts: ['สำนักปลัด'] },
     { href: 'secretary-docs.html', icon: 'fa-solid fa-file-signature', label: 'งานสารบรรณ', key: 'secretary-docs', depts: ['สำนักปลัด'], parent: 'secretary' },
     { href: 'secretary-meetings.html', icon: 'fa-solid fa-calendar-check', label: 'งานประชุม', key: 'secretary-meetings', depts: ['สำนักปลัด'], parent: 'secretary' },
@@ -25,6 +36,7 @@ const NAV_ITEMS = [
     { href: 'waste-staff.html', icon: 'fa-solid fa-users-gear', label: 'เจ้าหน้าที่รับชำระ', key: 'waste-staff', depts: ['กองคลัง'], parent: 'waste-dashboard' },
     { href: 'waste-register-request.html', icon: 'fa-solid fa-user-plus', label: 'คำขอขึ้นทะเบียน', key: 'waste-register-request', depts: ['กองคลัง'], parent: 'waste-dashboard' },
     { href: 'waste-cancel-request.html', icon: 'fa-solid fa-user-minus', label: 'คำขอยกเลิกบริการ', key: 'waste-cancel-request', depts: ['กองคลัง'], parent: 'waste-dashboard' },
+    { href: 'waste-excel-import.html', icon: 'fa-solid fa-file-excel', label: 'Smart Excel Import', key: 'waste-excel-import', depts: ['กองคลัง'], parent: 'waste-dashboard' },
     { href: 'publicworks.html', icon: 'fa-solid fa-hard-hat', label: 'กองช่าง', key: 'publicworks', depts: ['กองช่าง'] },
     { href: 'publicworks-electric.html', icon: 'fa-solid fa-bolt', label: 'ซ่อมบำรุงไฟฟ้า', key: 'publicworks-electric', depts: ['กองช่าง'], parent: 'publicworks' },
     { href: 'publicworks-electric-registry.html', icon: 'fa-solid fa-clipboard-list', label: 'ทะเบียนเสาไฟ', key: 'publicworks-electric-registry', depts: ['กองช่าง'], parent: 'publicworks-electric' },
@@ -76,6 +88,10 @@ function buildSidebar(activeKey) {
         return item.depts && item.depts.includes(userDept);
     });
 
+    // Find if current activeKey has a parent
+    const activeItem = NAV_ITEMS.find(i => i.key === activeKey);
+    const activeParentKey = activeItem ? activeItem.parent : null;
+
     sidebar.innerHTML = `
         <div class="sidebar-header d-flex flex-column align-items-center text-center">
             <img src="https://drive.google.com/thumbnail?id=1cPWRFVoN48eV6lJVS9E7nd2Mi7y5IQj8&sz=w200"
@@ -87,10 +103,11 @@ function buildSidebar(activeKey) {
         <ul class="list-unstyled components" id="nav-list">
             <li class="sidebar-section-label">เมนูหลัก</li>
             ${filteredNav.map(item => {
-                // If it's a 3rd level item (parent is a sub-menu like publicworks-electric)
+                // If it's a 3rd level item (parent is a sub-menu)
                 if (item.parent && item.parent.includes('-')) {
-                    // Only show if the active page is in the same family
-                    if (!activeKey.startsWith(item.parent)) return '';
+                    // Only show if the active page is this item itself, OR it shares the same parent, OR its parent is the active page
+                    const isFamily = (activeKey === item.parent) || (activeParentKey === item.parent) || (activeKey === item.key);
+                    if (!isFamily) return '';
                     return `
                         <li class="${item.key === activeKey ? 'active' : ''} ms-4 border-start border-white border-opacity-10 ps-2" style="border-left-width: 2px !important;">
                             <a href="${item.href}" class="py-1 text-xs opacity-75 hover:opacity-100" style="padding-left: 1rem !important; font-size: 0.75rem;">
@@ -147,11 +164,38 @@ function buildNavbar(pageTitle) {
     const user = getSessionUser();
     if (!user) return;
 
+    let notificationsHtml = '';
+    const userRole = (user.role || '').toLowerCase();
+    const userDept = user.dept || '';
+
+    // Contextual Notifications
+    if (userDept === 'กองคลัง' || userRole === 'super admin') {
+        notificationsHtml = `
+            <li class="px-3 pt-2 pb-1"><h6 class="fw-bold mb-0 text-sm">การแจ้งเตือน (กองคลัง)</h6></li>
+            <li><hr class="dropdown-divider my-1"></li>
+            <li><a class="dropdown-item py-2 text-sm" href="waste-payments.html"><i class="fa-solid fa-coins text-success me-2"></i>มีรายการรับชำระรอตรวจสอบ</a></li>
+            <li><a class="dropdown-item py-2 text-sm" href="waste-debtors.html"><i class="fa-solid fa-user-clock text-warning me-2"></i>พบลูกหนี้ค้างชำระเกินกำหนด</a></li>
+        `;
+    } else {
+        notificationsHtml = `
+            <li class="px-3 pt-2 pb-1"><h6 class="fw-bold mb-0 text-sm">การแจ้งเตือน</h6></li>
+            <li><hr class="dropdown-divider my-1"></li>
+            <li><a class="dropdown-item py-2 text-sm" href="#"><i class="fa-regular fa-bell text-info me-2"></i>ไม่มีการแจ้งเตือนใหม่</a></li>
+        `;
+    }
+
+    // Back button logic for Waste pages
+    const isWastePage = window.location.pathname.includes('waste-') && !window.location.pathname.includes('waste-dashboard.html');
+    const backBtnHtml = isWastePage ? `<button onclick="window.location.href='waste-dashboard.html'" class="btn btn-sm btn-light ms-2 d-flex align-items-center gap-1 border border-secondary border-opacity-25" title="กลับหน้าหลักค่าขยะ"><i class="fa-solid fa-arrow-left"></i> <span class="d-none d-sm-inline">ย้อนกลับ</span></button>` : '';
+
     navbar.innerHTML = `
-        <button type="button" id="sidebarCollapse" class="btn btn-sm btn-primary d-flex align-items-center gap-1">
-            <i class="fa-solid fa-bars"></i>
-        </button>
-        <h5 class="page-title mb-0 ms-2 d-none d-md-block">${pageTitle || 'ระบบบริหารจัดการเทศบาลอัจฉริยะ'}</h5>
+        <div class="d-flex align-items-center">
+            <button type="button" id="sidebarCollapse" class="btn btn-sm btn-primary d-flex align-items-center gap-1">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            ${backBtnHtml}
+            <h5 class="page-title mb-0 ms-3 d-none d-md-block" style="border-left: 2px solid #e5e7eb; padding-left: 1rem;">${pageTitle || 'ระบบบริหารจัดการเทศบาลอัจฉริยะ'}</h5>
+        </div>
 
         <div class="ms-auto d-flex align-items-center gap-3">
             <!-- Global Search -->
@@ -164,14 +208,10 @@ function buildNavbar(pageTitle) {
             <div class="dropdown">
                 <button class="btn btn-sm btn-light position-relative" data-bs-toggle="dropdown">
                     <i class="fa-solid fa-bell"></i>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.6rem;">3</span>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.6rem;">${userDept === 'กองคลัง' ? '2' : '0'}</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:280px; border:none; border-radius:12px;">
-                    <li class="px-3 pt-2 pb-1"><h6 class="fw-bold mb-0 text-sm">การแจ้งเตือน</h6></li>
-                    <li><hr class="dropdown-divider my-1"></li>
-                    <li><a class="dropdown-item py-2 text-sm" href="#"><i class="fa-regular fa-lightbulb text-warning me-2"></i>แจ้งซ่อมไฟถนนใหม่ (2 รายการ)</a></li>
-                    <li><a class="dropdown-item py-2 text-sm" href="#"><i class="fa-solid fa-coins text-success me-2"></i>รับชำระภาษีสำเร็จ (5 ราย)</a></li>
-                    <li><a class="dropdown-item py-2 text-sm" href="#"><i class="fa-solid fa-triangle-exclamation text-danger me-2"></i>ใบอนุญาตกิจการใกล้หมดอายุ (1)</a></li>
+                    ${notificationsHtml}
                 </ul>
             </div>
 
@@ -197,6 +237,9 @@ function buildNavbar(pageTitle) {
             </div>
         </div>
     `;
+    
+    // Re-init sidebar toggle after replacing HTML
+    initSidebarToggle();
 }
 
 // =============================================

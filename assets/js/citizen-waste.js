@@ -10,6 +10,7 @@ let currentStep = 'search'; // search | details | payment
 let selectedCustomer = null;
 let selectedMonthKeys = [];
 let slipBase64 = null;
+let currentPendingMonths = [];
 
 const CW_MONTH_NAMES = ['ตุลาคม','พฤศจิกายน','ธันวาคม','มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน'];
 const CW_MONTH_KEYS  = ['oct','nov','dec','jan','feb','mar','apr','may','jun','jul','aug','sep'];
@@ -28,10 +29,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Auto-search from LINE session
     const session = typeof LineAuth !== 'undefined' ? LineAuth.getSession() : null;
-    if (session && (session.houseNo || session.fullName)) {
-        const q = session.houseNo || session.fullName;
-        document.getElementById('searchInput').value = q;
-        searchCustomer();
+    if (session) {
+        if (session.houseNo) document.getElementById('searchInput').value = session.houseNo;
+        if (session.moo) {
+            const mooEl = document.getElementById('searchMoo');
+            if (mooEl) {
+                // Ensure moo is just the number
+                let mooVal = String(session.moo).replace(/\D/g, '');
+                if (mooVal) mooEl.value = mooVal;
+            }
+        }
+        if (session.houseNo || session.fullName || (session.firstName && session.lastName)) {
+            searchCustomer(true);
+        }
     }
 });
 
@@ -41,7 +51,7 @@ function buildFiscalYearOptions() {
     const now = new Date();
     const currentFY = now.getMonth() >= 9 ? now.getFullYear() + 544 : now.getFullYear() + 543;
     sel.innerHTML = '';
-    for (let y = currentFY; y >= currentFY - 2; y--) {
+    for (let y = currentFY + 1; y >= currentFY - 1; y--) {
         const opt = document.createElement('option');
         opt.value = String(y);
         opt.textContent = String(y);
@@ -99,19 +109,21 @@ function goBack() {
         document.getElementById('stickyAction').style.display = 'none';
         updateStepUI();
     } else {
-        window.location.href = 'citizen-portal.html';
+        window.location.href = 'waste-payment-portal.html';
     }
 }
 
 // ============================================
 // STEP 1: SEARCH
 // ============================================
-async function searchCustomer() {
+async function searchCustomer(isAuto = false) {
     const q = document.getElementById('searchInput').value.trim();
+    const mooEl = document.getElementById('searchMoo');
+    const moo = mooEl ? mooEl.value : '';
     const resultsDiv = document.getElementById('searchResults');
 
-    if (!q) {
-        cwToast('กรุณากรอกข้อมูลเพื่อค้นหา', 'warning');
+    if (!q && !moo && !isAuto) {
+        cwToast('กรุณากรอกข้อมูลหรือเลือกหมู่เพื่อค้นหา', 'warning');
         return;
     }
 
@@ -122,19 +134,49 @@ async function searchCustomer() {
     await new Promise(r => setTimeout(r, 300));
 
     const allCustomers = typeof getWasteCustomers === 'function' ? getWasteCustomers() : [];
-    const matches = allCustomers.filter(c =>
-        c.status === 'active' && (
-            (c.name && c.name.includes(q)) ||
-            (c.house_no && c.house_no.includes(q)) ||
-            (c.id_card && c.id_card.includes(q))
-        )
-    );
+    let matches = [];
+
+    if (isAuto && typeof LineAuth !== 'undefined') {
+        const session = LineAuth.getSession();
+        if (session) {
+            const sHouseNo = session.houseNo ? session.houseNo.trim() : '';
+            const sMoo = session.moo ? String(session.moo).replace(/\D/g, '') : '';
+            const sSubdistrict = session.subdistrictName ? session.subdistrictName.trim() : '';
+            
+            // 1. Try Address Match
+            if (sHouseNo && sMoo && sSubdistrict) {
+                matches = allCustomers.filter(c => c.status === 'active' && c.house_no === sHouseNo && String(c.moo) === sMoo && c.subdistrict === sSubdistrict);
+            }
+            
+            // 2. Try Name Match (fallback)
+            if (matches.length === 0 && session.firstName && session.lastName) {
+                matches = allCustomers.filter(c => c.status === 'active' && c.name && c.name.includes(session.firstName) && c.name.includes(session.lastName));
+            }
+        }
+    }
+
+    // Manual search or auto-search didn't find specific matches
+    if (matches.length === 0 && (q || moo)) {
+        matches = allCustomers.filter(c => c.status === 'active');
+        
+        if (q) {
+            matches = matches.filter(c => 
+                (c.name && c.name.includes(q)) ||
+                (c.house_no && c.house_no.includes(q)) ||
+                (c.id_card && c.id_card.includes(q))
+            );
+        }
+        
+        if (moo) {
+            matches = matches.filter(c => String(c.moo) === moo);
+        }
+    }
 
     if (matches.length === 0) {
         resultsDiv.innerHTML = `
             <div class="text-center py-4">
                 <i class="fa-solid fa-face-sad-tear fa-2x text-muted mb-2" style="opacity:0.3;"></i>
-                <p class="small text-muted mb-0">ไม่พบข้อมูลที่ตรงกับ "<strong>${q}</strong>"</p>
+                <p class="small text-muted mb-0">ไม่พบข้อมูลที่ตรงกัน</p>
             </div>`;
         return;
     }
@@ -162,6 +204,18 @@ async function searchCustomer() {
             </div>
         </div>`;
     }).join('');
+}
+
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    const mooEl = document.getElementById('searchMoo');
+    if (mooEl) mooEl.value = '';
+    
+    document.getElementById('searchResults').innerHTML = `
+        <div class="text-center text-muted py-4">
+            <i class="fa-solid fa-file-invoice fa-2x mb-2" style="opacity:0.2;"></i>
+            <p class="small mb-0">กรอกข้อมูลเพื่อค้นหาประวัติการชำระ</p>
+        </div>`;
 }
 
 // ============================================
@@ -212,6 +266,7 @@ async function loadMonthlyStatus() {
             if (data) data.forEach(r => { pendingMonths = pendingMonths.concat(r.paid_months); });
         }
     } catch (e) { console.warn('Pending check failed', e); }
+    currentPendingMonths = pendingMonths;
 
     let html = '';
     let totalDebt = 0;
@@ -270,6 +325,17 @@ async function loadMonthlyStatus() {
         debtBadge.style.display = 'none';
     }
 
+    const btnToggleAll = document.getElementById('btnToggleAllMonths');
+    if (btnToggleAll) {
+        if (unpaidCount > 0) {
+            btnToggleAll.style.display = '';
+            btnToggleAll.textContent = selectedMonthKeys.length === unpaidCount ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด';
+            btnToggleAll.className = selectedMonthKeys.length === unpaidCount ? 'btn btn-sm btn-outline-danger rounded-pill px-2 py-0 text-xs fw-semibold' : 'btn btn-sm btn-outline-success rounded-pill px-2 py-0 text-xs fw-semibold';
+        } else {
+            btnToggleAll.style.display = 'none';
+        }
+    }
+
     updateActionButton();
 }
 
@@ -282,6 +348,46 @@ function allPreviousSelected(targetIdx, firstUnpaidIdx, customerStatus, pendingM
         if (!selectedMonthKeys.includes(k)) return false;
     }
     return true;
+}
+
+function toggleAllMonths() {
+    const year = document.getElementById('fiscalYearSelect').value;
+    const allStatus = typeof getMonthlyStatus === 'function' ? getMonthlyStatus() : {};
+    const customerStatus = (allStatus[selectedCustomer.id] || {})[year] || {};
+    
+    const pendingMonths = currentPendingMonths;
+    const allSelectable = [];
+    
+    let firstUnpaidIdx = -1;
+    for (let i = 0; i < CW_MONTH_KEYS.length; i++) {
+        const k = CW_MONTH_KEYS[i];
+        const s = customerStatus[k] || 'unpaid';
+        const isPending = pendingMonths.includes(k);
+        if (s === 'unpaid' && !isPending) {
+            if (firstUnpaidIdx === -1) firstUnpaidIdx = i;
+        }
+    }
+    
+    if (firstUnpaidIdx !== -1) {
+        for (let i = firstUnpaidIdx; i < CW_MONTH_KEYS.length; i++) {
+            const k = CW_MONTH_KEYS[i];
+            const s = customerStatus[k] || 'unpaid';
+            const isPending = pendingMonths.includes(k);
+            if (s === 'unpaid' && !isPending) {
+                allSelectable.push(k);
+            }
+        }
+    }
+    
+    if (allSelectable.length === 0) return;
+    
+    if (selectedMonthKeys.length === allSelectable.length) {
+        selectedMonthKeys = [];
+    } else {
+        selectedMonthKeys = [...allSelectable];
+    }
+    
+    loadMonthlyStatus();
 }
 
 function toggleMonth(key) {
@@ -501,9 +607,8 @@ async function submitTransaction() {
 
         new bootstrap.Modal(document.getElementById('successModal')).show();
         
-        // Auto redirect after 3 seconds
         setTimeout(() => {
-            window.location.href = 'citizen-portal.html';
+            window.location.href = 'waste-payment-portal.html';
         }, 3000);
 
     } catch (err) {
@@ -534,6 +639,176 @@ function cwToast(msg, type) {
 // ============================================
 // FORMAT HELPER
 // ============================================
+// ============================================
+// FORMAT HELPER
+// ============================================
 function cwFmt(n) {
     return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(n);
+}
+
+// ============================================
+// CHAT SYSTEM (CITIZEN)
+// ============================================
+let chatSubscription = null;
+let currentChatRoomId = null;
+
+function getCitizenChatRoomId() {
+    const session = LineAuth.getSession();
+    if (session && session.lineId) {
+        return session.lineId; // Use LINE ID if available
+    } else if (session && session.houseNo && session.firstName) {
+        return `${session.houseNo}_${session.firstName}`; // Fallback to house+name
+    }
+    return 'anonymous_' + Math.random().toString(36).substring(7);
+}
+
+function getCitizenChatName() {
+    const session = LineAuth.getSession();
+    if (session) {
+        return session.firstName ? `${session.firstName} ${session.lastName || ''}` : (session.fullName || session.lineName || 'ประชาชน (ไม่ระบุตัวตน)');
+    }
+    return 'ประชาชน (ไม่ระบุตัวตน)';
+}
+
+function toggleCitizenChat() {
+    const chatWindow = document.getElementById('citizenChatWindow');
+    if (!chatWindow) return;
+    const badge = document.getElementById('chatUnreadBadge');
+    
+    if (chatWindow.classList.contains('show')) {
+        chatWindow.classList.remove('show');
+    } else {
+        chatWindow.classList.add('show');
+        if(badge) {
+            badge.style.display = 'none';
+            badge.innerText = '0';
+        }
+        initCitizenChat();
+    }
+}
+
+async function initCitizenChat() {
+    if (!currentChatRoomId) {
+        currentChatRoomId = getCitizenChatRoomId();
+    }
+    
+    // Load existing messages
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('waste_chats')
+                .select('*')
+                .eq('room_id', currentChatRoomId)
+                .order('created_at', { ascending: true });
+                
+            if (!error && data) {
+                const chatArea = document.getElementById('chatMessagesArea');
+                if(chatArea) {
+                    chatArea.innerHTML = '<div class="text-center text-muted text-xs my-2">-- เริ่มการสนทนา --</div>';
+                    data.forEach(msg => renderChatMessage(msg));
+                    scrollToBottom();
+                }
+            }
+            
+            // Subscribe to real-time changes if not already subscribed
+            if (!chatSubscription) {
+                chatSubscription = supabaseClient
+                    .channel(`chat_citizen_${currentChatRoomId}`)
+                    .on('postgres_changes', { 
+                        event: 'INSERT', 
+                        schema: 'public', 
+                        table: 'waste_chats',
+                        filter: `room_id=eq.${currentChatRoomId}`
+                    }, payload => {
+                        const newMsg = payload.new;
+                        // Avoid duplicating message if we just sent it
+                        if (!document.getElementById('msg_' + newMsg.id)) {
+                            renderChatMessage(newMsg);
+                            scrollToBottom();
+                            
+                            // If chat is not open and it's from official, show badge
+                            const chatWindow = document.getElementById('citizenChatWindow');
+                            if (chatWindow && !chatWindow.classList.contains('show') && newMsg.sender_type === 'official') {
+                                const badge = document.getElementById('chatUnreadBadge');
+                                if(badge) {
+                                    badge.style.display = 'block';
+                                    badge.innerText = parseInt(badge.innerText || '0') + 1;
+                                }
+                            }
+                        }
+                    })
+                    .subscribe();
+            }
+        } catch (err) {
+            console.error("Chat init error:", err);
+        }
+    }
+}
+
+function renderChatMessage(msg) {
+    const chatArea = document.getElementById('chatMessagesArea');
+    if (!chatArea) return;
+    const timeStr = new Date(msg.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    const isCitizen = msg.sender_type === 'citizen';
+    
+    const html = `
+        <div class="chat-msg ${isCitizen ? 'citizen' : 'official'}" id="msg_${msg.id}">
+            <div>${msg.message}</div>
+            <span class="time">${timeStr}</span>
+        </div>
+    `;
+    chatArea.insertAdjacentHTML('beforeend', html);
+}
+
+function scrollToBottom() {
+    const chatArea = document.getElementById('chatMessagesArea');
+    if (chatArea) {
+        chatArea.scrollTop = chatArea.scrollHeight;
+    }
+}
+
+function handleChatKeypress(event) {
+    if (event.key === 'Enter') {
+        sendCitizenMessage();
+    }
+}
+
+async function sendCitizenMessage() {
+    const input = document.getElementById('chatInput');
+    if (!input) return;
+    const msgText = input.value.trim();
+    
+    if (!msgText) return;
+    
+    if (!currentChatRoomId) currentChatRoomId = getCitizenChatRoomId();
+    
+    input.value = '';
+    
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        try {
+            const { data, error } = await supabaseClient
+                .from('waste_chats')
+                .insert([{
+                    room_id: currentChatRoomId,
+                    sender_type: 'citizen',
+                    sender_name: getCitizenChatName(),
+                    message: msgText
+                }])
+                .select();
+                
+            if (!error && data && data.length > 0) {
+                // message will be rendered via realtime subscription, 
+                // but we can optimistic render it here to feel faster
+                if (!document.getElementById('msg_' + data[0].id)) {
+                    renderChatMessage(data[0]);
+                    scrollToBottom();
+                }
+            }
+        } catch(err) {
+            console.error("Send message error:", err);
+            cwToast('ไม่สามารถส่งข้อความได้', 'danger');
+        }
+    } else {
+        cwToast('ระบบแชทไม่พร้อมใช้งานขณะนี้', 'warning');
+    }
 }
