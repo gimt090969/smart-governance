@@ -8,18 +8,18 @@
 // Renders the sidebar from one shared config
 // =============================================
 const NAV_ITEMS = [
-    { href: 'dashboard.html', icon: 'fa-solid fa-chart-pie', label: 'แดชบอร์ด', key: 'dashboard', depts: ['ALL'] },
-    { href: 'digital-data-dashboard.html', icon: 'fa-solid fa-database', label: 'Digital Data Center', key: 'digital-data-dashboard', depts: ['ALL'] },
-    { href: 'digital-data-map.html', icon: 'fa-solid fa-map-location-dot', label: 'GIS Map', key: 'digital-data-map', depts: ['ALL'], parent: 'digital-data-dashboard' },
-    { href: 'digital-data-households.html', icon: 'fa-solid fa-house-chimney', label: 'ครัวเรือน', key: 'digital-data-households', depts: ['ALL'], parent: 'digital-data-dashboard' },
-    { href: 'digital-data-population.html', icon: 'fa-solid fa-users', label: 'ประชากร', key: 'digital-data-population', depts: ['ALL'], parent: 'digital-data-dashboard' },
-    { href: 'digital-data-elderly.html', icon: 'fa-solid fa-person-cane', label: 'ผู้สูงอายุ', key: 'digital-data-elderly', depts: ['ALL'], parent: 'digital-data-dashboard' },
-    { href: 'digital-data-disabled.html', icon: 'fa-solid fa-wheelchair', label: 'ผู้พิการ', key: 'digital-data-disabled', depts: ['ALL'], parent: 'digital-data-dashboard' },
-    { href: 'digital-data-bedridden.html', icon: 'fa-solid fa-bed-pulse', label: 'ผู้ป่วยติดเตียง', key: 'digital-data-bedridden', depts: ['ALL'], parent: 'digital-data-dashboard' },
-    { href: 'digital-data-newborn.html', icon: 'fa-solid fa-baby', label: 'เด็กแรกเกิด', key: 'digital-data-newborn', depts: ['ALL'], parent: 'digital-data-dashboard' },
-    { href: 'digital-data-poor.html', icon: 'fa-solid fa-hand-holding-heart', label: 'ครัวเรือนยากจน', key: 'digital-data-poor', depts: ['ALL'], parent: 'digital-data-dashboard' },
-    { href: 'digital-data-scholars.html', icon: 'fa-solid fa-graduation-cap', label: 'ปราชญ์ชุมชน', key: 'digital-data-scholars', depts: ['ALL'], parent: 'digital-data-dashboard' },
-    { href: 'digital-data-leaders.html', icon: 'fa-solid fa-people-group', label: 'ผู้นำ/อาสาสมัคร', key: 'digital-data-leaders', depts: ['ALL'], parent: 'digital-data-dashboard' },
+    { href: 'dashboard.html', icon: 'fa-solid fa-chart-pie', label: 'แดชบอร์ด', key: 'dashboard', depts: [] },
+    { href: 'digital-data-dashboard.html', icon: 'fa-solid fa-database', label: 'Digital Data Center', key: 'digital-data-dashboard', depts: [] },
+    { href: 'digital-data-map.html', icon: 'fa-solid fa-map-location-dot', label: 'GIS Map', key: 'digital-data-map', depts: [], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-households.html', icon: 'fa-solid fa-house-chimney', label: 'ครัวเรือน', key: 'digital-data-households', depts: [], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-population.html', icon: 'fa-solid fa-users', label: 'ประชากร', key: 'digital-data-population', depts: [], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-elderly.html', icon: 'fa-solid fa-person-cane', label: 'ผู้สูงอายุ', key: 'digital-data-elderly', depts: [], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-disabled.html', icon: 'fa-solid fa-wheelchair', label: 'ผู้พิการ', key: 'digital-data-disabled', depts: [], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-bedridden.html', icon: 'fa-solid fa-bed-pulse', label: 'ผู้ป่วยติดเตียง', key: 'digital-data-bedridden', depts: [], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-newborn.html', icon: 'fa-solid fa-baby', label: 'เด็กแรกเกิด', key: 'digital-data-newborn', depts: [], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-poor.html', icon: 'fa-solid fa-hand-holding-heart', label: 'ครัวเรือนยากจน', key: 'digital-data-poor', depts: [], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-scholars.html', icon: 'fa-solid fa-graduation-cap', label: 'ปราชญ์ชุมชน', key: 'digital-data-scholars', depts: [], parent: 'digital-data-dashboard' },
+    { href: 'digital-data-leaders.html', icon: 'fa-solid fa-people-group', label: 'ผู้นำ/อาสาสมัคร', key: 'digital-data-leaders', depts: [], parent: 'digital-data-dashboard' },
     { href: 'secretary.html', icon: 'fa-solid fa-building-user', label: 'สำนักปลัด', key: 'secretary', depts: ['สำนักปลัด'] },
     { href: 'secretary-docs.html', icon: 'fa-solid fa-file-signature', label: 'งานสารบรรณ', key: 'secretary-docs', depts: ['สำนักปลัด'], parent: 'secretary' },
     { href: 'secretary-meetings.html', icon: 'fa-solid fa-calendar-check', label: 'งานประชุม', key: 'secretary-meetings', depts: ['สำนักปลัด'], parent: 'secretary' },
@@ -387,7 +387,15 @@ document.addEventListener('DOMContentLoaded', function () {
         if (currentNavItem && userRole !== 'super admin') {
             if (!currentNavItem.depts.includes('ALL') && !currentNavItem.depts.includes(userDept)) {
                 alert('ขออภัย คุณไม่มีสิทธิ์เข้าใช้งานในส่วนงานนี้');
-                window.location.href = 'dashboard.html';
+                let fallback = 'index.html';
+                if (userDept === 'กองคลัง') fallback = 'finance.html';
+                else if (userDept === 'กองช่าง') fallback = 'publicworks.html';
+                else if (userDept === 'กองการศึกษา') fallback = 'education.html';
+                else if (userDept === 'กองสาธารณสุขฯ') fallback = 'health.html';
+                else if (userDept === 'สำนักปลัด') fallback = 'secretary.html';
+                else if (userDept === 'กองสวัสดิการฯ') fallback = 'welfare.html';
+                else if (userDept === 'กองยุทธศาสตร์ฯ') fallback = 'planning.html';
+                window.location.href = fallback;
                 return;
             }
         }
@@ -395,7 +403,10 @@ document.addEventListener('DOMContentLoaded', function () {
         // จำกัดการเข้าถึงหน้า Settings เฉพาะ Super Admin เท่านั้น
         if (currentPage === 'settings.html' && userRole !== 'super admin') {
             alert('เฉพาะผู้ดูแลระบบสูงสุด (Super Admin) เท่านั้นที่สามารถเข้าถึงการตั้งค่าได้');
-            window.location.href = 'dashboard.html';
+            let fallback = 'index.html';
+            if (userDept === 'กองคลัง') fallback = 'finance.html';
+            else if (userDept === 'กองช่าง') fallback = 'publicworks.html';
+            window.location.href = fallback;
             return;
         }
     }
