@@ -119,6 +119,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     initWasteData();
     await fetchWasteFeeTypes();
     await fetchWasteCustomers();
+    await fetchMonthlyStatus();
+    await fetchWastePayments();
+    if (typeof fetchRegisterRequestsDB === 'function') await fetchRegisterRequestsDB();
+    if (typeof fetchCancelRequestsDB === 'function') await fetchCancelRequestsDB();
     const stats = getWasteDashboardStats();
     document.getElementById('kpiTotal').textContent = formatMoney(stats.totalHouseholds);
     document.getElementById('kpiPaid').textContent = formatMoney(stats.paidThisMonth);

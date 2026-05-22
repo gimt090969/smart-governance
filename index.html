@@ -487,8 +487,16 @@
                                         เข้าสู่ระบบเพื่อใช้บริการของเทศบาล <br>ผ่านบัญชี LINE ของคุณ</p>
                                 </div>
 
-                                <button type="button" class="btn btn-line mt-2 py-3 fs-6" id="lineLoginBtn"
-                                    onclick="handleLineLogin()">
+                                <div class="mb-3 text-start">
+                                    <label class="form-label" style="font-size: 0.85rem; color: rgba(255,255,255,0.8);">เลือกระบบที่ต้องการเข้าใช้งาน</label>
+                                    <select class="form-select form-select-sm" id="citizenSystemSelect" style="background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: white; padding-top: 0.5rem; padding-bottom: 0.5rem;">
+                                        <option value="waste" class="text-dark">ระบบชำระค่าขยะ (Waste Collection Payment System)</option>
+                                        <option value="eservice" class="text-dark">ระบบบริการประชาชน (E-Service System)</option>
+                                    </select>
+                                </div>
+
+                                <button type="button" class="btn btn-line mt-2 py-3 fs-6 w-100" id="lineLoginBtn"
+                                    onclick="handleLineLogin(document.getElementById('citizenSystemSelect').value)">
                                     <i class="fa-brands fa-line me-2 fa-lg"></i>เข้าสู่ระบบด้วย LINE
                                 </button>
 
@@ -899,7 +907,22 @@
         // ---- LINE Login for Citizens ----
         let pendingLineProfile = null;
 
-        function handleLineLogin() {
+        function handleLineLogin(target = 'eservice') {
+            localStorage.setItem('sgov_citizen_target', target);
+            
+            // if already logged in, redirect directly
+            if (LineAuth.isLoggedIn()) {
+                const s = LineAuth.getSession();
+                if (s && s.lineUserId) {
+                    if (target === 'waste') {
+                        window.location.href = 'waste-payment-portal.html';
+                    } else {
+                        window.location.href = 'citizen-portal.html';
+                    }
+                    return;
+                }
+            }
+
             const btn = document.getElementById('lineLoginBtn');
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังเชื่อมต่อ LINE...';
@@ -1067,7 +1090,12 @@
             LineAuth.createSession(userData);
 
             await new Promise(r => setTimeout(r, 800));
-            window.location.href = 'citizen-portal.html';
+            const target = localStorage.getItem('sgov_citizen_target') || 'eservice';
+            if (target === 'waste') {
+                window.location.href = 'waste-payment-portal.html';
+            } else {
+                window.location.href = 'citizen-portal.html';
+            }
         }
 
         // ---- Handle LINE OAuth Callback on page load ----
@@ -1154,7 +1182,12 @@
                     LineAuth.createSession(user);
                     overlay.querySelector('.text-white.fw-semibold').textContent = 'ยินดีต้อนรับกลับ, ' + user.fullName + '!';
                     await new Promise(r => setTimeout(r, 1000));
-                    window.location.href = 'citizen-portal.html';
+                    const target = localStorage.getItem('sgov_citizen_target') || 'eservice';
+                    if (target === 'waste') {
+                        window.location.href = 'waste-payment-portal.html';
+                    } else {
+                        window.location.href = 'citizen-portal.html';
+                    }
                 } else {
                     // New user → show registration modal
                     overlay.classList.add('d-none');

@@ -53,11 +53,18 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/app.js"></script>
 <script src="assets/js/waste.js"></script>
 <script src="assets/js/responsive.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() { initWasteData(); renderCancelRequests(); });
+document.addEventListener('DOMContentLoaded', async function() { 
+    initWasteData(); 
+    if (typeof fetchCancelRequestsDB === 'function') await fetchCancelRequestsDB();
+    if (typeof fetchWasteCustomers === 'function') await fetchWasteCustomers();
+    renderCancelRequests(); 
+});
 
 function renderCancelRequests() {
     const reqs = getCancelRequests();
@@ -85,18 +92,27 @@ function renderCancelRequests() {
 }
 
 function approveCan(id) {
-    Swal.fire({title:'อนุมัติยกเลิก?',text:'ระบบจะเปลี่ยนสถานะลูกค้าเป็น "ยกเลิก"',icon:'warning',showCancelButton:true,confirmButtonText:'อนุมัติ',confirmButtonColor:'#c81e1e'}).then(result => {
+    Swal.fire({title:'อนุมัติยกเลิก?',text:'ระบบจะเปลี่ยนสถานะลูกค้าเป็น "ยกเลิก"',icon:'warning',showCancelButton:true,confirmButtonText:'อนุมัติ',confirmButtonColor:'#c81e1e'}).then(async result => {
         if (result.isConfirmed) {
-            const reqs = getCancelRequests();
+            const reqs = typeof getCancelRequests === 'function' ? getCancelRequests() : [];
             const r = reqs.find(x => x.id === id);
             if (!r) return;
             r.status = 'approved';
-            saveCancelRequests(reqs);
+            if (typeof saveCancelRequestDB === 'function') await saveCancelRequestDB(r);
+            else saveCancelRequests(reqs);
+            
             // Update customer status
+            const customers = typeof getWasteCustomers === 'function' ? getWasteCustomers() : [];
+            let targetCustomer = null;
             if (r.customer_id) {
-                const customers = getWasteCustomers();
-                const c = customers.find(x => x.id === r.customer_id);
-                if (c) { c.status = 'cancelled'; saveWasteCustomers(customers); }
+                targetCustomer = customers.find(x => x.id === r.customer_id);
+            } else {
+                targetCustomer = customers.find(x => x.house_no === r.house_no && x.moo === r.moo);
+            }
+            if (targetCustomer) { 
+                targetCustomer.status = 'cancelled'; 
+                if (typeof saveWasteCustomerDB === 'function') await saveWasteCustomerDB(targetCustomer);
+                else saveWasteCustomers(customers); 
             }
             showToast('อนุมัติยกเลิกสำเร็จ','success');
             renderCancelRequests();
@@ -105,11 +121,16 @@ function approveCan(id) {
 }
 
 function rejectCan(id) {
-    Swal.fire({title:'ปฏิเสธคำขอยกเลิก?',input:'text',inputPlaceholder:'เหตุผล...',showCancelButton:true,confirmButtonColor:'#c81e1e',confirmButtonText:'ปฏิเสธ'}).then(r => {
-        if (r.isConfirmed) {
-            const reqs = getCancelRequests();
+    Swal.fire({title:'ปฏิเสธคำขอยกเลิก?',input:'text',inputPlaceholder:'เหตุผล...',showCancelButton:true,confirmButtonColor:'#c81e1e',confirmButtonText:'ปฏิเสธ'}).then(async result => {
+        if (result.isConfirmed) {
+            const reqs = typeof getCancelRequests === 'function' ? getCancelRequests() : [];
             const req = reqs.find(x => x.id === id);
-            if (req) { req.status = 'rejected'; req.note = r.value||''; saveCancelRequests(reqs); }
+            if (req) { 
+                req.status = 'rejected'; 
+                req.note = result.value||''; 
+                if (typeof saveCancelRequestDB === 'function') await saveCancelRequestDB(req);
+                else saveCancelRequests(reqs); 
+            }
             showToast('ปฏิเสธคำขอแล้ว','warning');
             renderCancelRequests();
         }
