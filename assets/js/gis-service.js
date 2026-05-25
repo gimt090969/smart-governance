@@ -14,8 +14,8 @@ const GISService = {
         scholars:'fa-graduation-cap', leaders:'fa-people-group'
     },
 
-    initMap(containerId, center=[17.975,103.472], zoom=13) {
-        this.map = L.map(containerId).setView(center, zoom);
+    initMap(containerId) {
+        this.map = L.map(containerId);
         
         // Base Maps
         const googleStreets = L.tileLayer('http://mt0.google.com/vt/lyrs=m&hl=th&x={x}&y={y}&z={z}', {
@@ -27,7 +27,7 @@ const GISService = {
         });
 
         // Set default layer
-        googleStreets.addTo(this.map);
+        googleHybrid.addTo(this.map);
         
         // Add Layer Control (Top Left)
         const baseMaps = {
@@ -52,6 +52,13 @@ const GISService = {
             this.layerGroup.addLayer(marker);
         });
         this.layers.all = data;
+        
+        // Auto fit bounds to markers if any exist
+        if (this.layerGroup.getLayers().length > 0) {
+            this.map.fitBounds(this.layerGroup.getBounds(), { padding: [50, 50], maxZoom: 17 });
+        } else {
+            this.map.setView([14.882, 100.414], 13); // Central Thailand fallback
+        }
     },
 
     filterSpatialData(layerType, data) {
@@ -73,6 +80,14 @@ const GISService = {
             const marker = this._createMarker(h, layerType);
             this.layerGroup.addLayer(marker);
         });
+        
+        // Auto fit bounds to filtered markers if any exist
+        if (this.layerGroup.getLayers().length > 0) {
+            this.map.fitBounds(this.layerGroup.getBounds(), { padding: [50, 50], maxZoom: 17 });
+        } else {
+            this.map.setView([14.882, 100.414], 13);
+        }
+        
         return filtered;
     },
 

@@ -456,8 +456,20 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Auto-build sidebar if present
-    if (document.getElementById('sidebar')) {
+    const sidebarEl = document.getElementById('sidebar');
+    if (sidebarEl) {
         buildSidebar();
+        
+        // Restore sidebar scroll position
+        const savedScroll = sessionStorage.getItem('sidebarScrollPos');
+        if (savedScroll) {
+            sidebarEl.scrollTop = parseInt(savedScroll, 10);
+        }
+
+        // Save sidebar scroll position on scroll
+        sidebarEl.addEventListener('scroll', function() {
+            sessionStorage.setItem('sidebarScrollPos', this.scrollTop);
+        });
     }
 
     // Auto-build navbar if present
