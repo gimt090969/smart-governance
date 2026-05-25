@@ -120,11 +120,7 @@ a { text-decoration: none; }
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.65rem 0.85rem;
     border-radius: 10px;
-    color: var(--sidebar-text);
-    font-size: 0.88rem;
-    font-weight: 400;
     transition: all 0.18s ease;
     cursor: pointer;
 }
@@ -139,18 +135,98 @@ a { text-decoration: none; }
 
 #sidebar ul.components li a:hover,
 .sidebar-link:hover {
-    background: rgba(255,255,255,0.07);
-    color: #fff;
     transform: translateX(2px);
 }
 
-#sidebar ul.components li.active > a,
-.sidebar-link.active {
-    background: var(--sidebar-hover);
-    color: #fff !important;
-    font-weight: 500;
-    box-shadow: 0 2px 8px rgba(26,86,219,0.35);
+/* Level 1 Menu */
+#sidebar ul.components li.nav-level-1 > a {
+    color: #e5e7eb;
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 0.7rem 0.85rem;
 }
+#sidebar ul.components li.nav-level-1 > a i { color: #9ca3af; }
+#sidebar ul.components li.nav-level-1:hover > a { color: #ffffff; background: rgba(255,255,255,0.05); }
+#sidebar ul.components li.nav-level-1.active > a {
+    background: var(--sidebar-hover);
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(26,86,219,0.35);
+}
+#sidebar ul.components li.nav-level-1.active > a i { color: #ffffff; }
+
+/* Level 2 Menu */
+#sidebar ul.components li.nav-level-2 {
+    margin-left: 0.75rem;
+    border-left: 1.5px solid rgba(255,255,255,0.1);
+}
+#sidebar ul.components li.nav-level-2 > a {
+    color: #9ca3af;
+    font-weight: 400;
+    font-size: 0.85rem;
+    padding: 0.55rem 0.75rem 0.55rem 1rem;
+    position: relative;
+    border-radius: 0 8px 8px 0;
+}
+#sidebar ul.components li.nav-level-2 > a::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 0.6rem;
+    height: 1.5px;
+    background: rgba(255,255,255,0.1);
+}
+#sidebar ul.components li.nav-level-2 > a i { font-size: 0.85rem; }
+#sidebar ul.components li.nav-level-2:hover > a { color: #f3f4f6; background: rgba(255,255,255,0.03); }
+#sidebar ul.components li.nav-level-2.active {
+    border-left-color: #60a5fa;
+}
+#sidebar ul.components li.nav-level-2.active > a {
+    color: #60a5fa !important;
+    background: rgba(26,86,219,0.15);
+    font-weight: 500;
+}
+#sidebar ul.components li.nav-level-2.active > a::before {
+    background: #60a5fa;
+}
+#sidebar ul.components li.nav-level-2.active > a i { color: #60a5fa; }
+
+/* Level 3 Menu */
+#sidebar ul.components li.nav-level-3 {
+    margin-left: 2.25rem;
+    border-left: 1.5px dotted rgba(255,255,255,0.15);
+}
+#sidebar ul.components li.nav-level-3 > a {
+    color: #6b7280;
+    font-weight: 400;
+    font-size: 0.78rem;
+    padding: 0.5rem 0.75rem 0.5rem 1rem;
+    position: relative;
+    border-radius: 0 8px 8px 0;
+}
+#sidebar ul.components li.nav-level-3 > a::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 0.6rem;
+    height: 1.5px;
+    background: rgba(255,255,255,0.15);
+}
+#sidebar ul.components li.nav-level-3 > a i { font-size: 0.75rem; }
+#sidebar ul.components li.nav-level-3:hover > a { color: #9ca3af; background: rgba(255,255,255,0.02); }
+#sidebar ul.components li.nav-level-3.active {
+    border-left-style: solid;
+    border-left-color: #38bdf8;
+}
+#sidebar ul.components li.nav-level-3.active > a {
+    color: #38bdf8 !important;
+    font-weight: 500;
+}
+#sidebar ul.components li.nav-level-3.active > a::before {
+    background: #38bdf8;
+}
+#sidebar ul.components li.nav-level-3.active > a i { color: #38bdf8; }
 
 /* Sidebar section label */
 .sidebar-section-label {
@@ -811,6 +887,92 @@ a { text-decoration: none; }
     width: 8px; height: 8px;
     border-radius: 50%;
     display: inline-block;
+}
+
+/* ========================================
+   DIGITAL INFRASTRUCTURE POLISH (DIIS)
+   ======================================== */
+.diis-badge {
+    font-size: 0.7rem !important;
+    padding: 0.3rem 0.6rem !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+}
+.diis-badge-success { background-color: #ecfdf5 !important; color: #047857 !important; border: 1px solid #a7f3d0 !important; }
+.diis-badge-warning { background-color: #fffbeb !important; color: #b45309 !important; border: 1px solid #fde68a !important; }
+.diis-badge-danger { background-color: #fef2f2 !important; color: #b91c1c !important; border: 1px solid #fecaca !important; }
+.diis-badge-info { background-color: #eff6ff !important; color: #1d4ed8 !important; border: 1px solid #bfdbfe !important; }
+
+.table-gov {
+    font-size: 0.8rem !important;
+    border-collapse: separate !important;
+    border-spacing: 0 4px !important;
+}
+.table-gov thead th {
+    background-color: #f8fafc !important;
+    color: #475569 !important;
+    font-weight: 700 !important;
+    border-bottom: 2px solid #e2e8f0 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em !important;
+    padding: 10px 14px !important;
+    white-space: nowrap !important;
+}
+.table-gov tbody td {
+    padding: 12px 14px !important;
+    background-color: #ffffff !important;
+    border-top: 1px solid #f1f5f9 !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    vertical-align: middle !important;
+}
+.table-gov tbody tr:hover td {
+    background-color: #f8fafc !important;
+}
+.text-nowrap {
+    white-space: nowrap !important;
+}
+.line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* responsive refinements specifically for DIIS maps & cards */
+@media (max-width: 767.98px) {
+    .map-floating-sidebar {
+        position: relative !important;
+        top: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        max-height: none !important;
+        margin-top: 15px !important;
+        border-radius: 12px !important;
+    }
+    #gisMasterMap {
+        height: 380px !important;
+    }
+    .diis-nav-tabs {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding-bottom: 4px !important;
+    }
+    .diis-nav-tabs .nav-item {
+        white-space: nowrap !important;
+    }
+    .kpi-dark-card {
+        padding: 0.75rem !important;
+    }
+    .kpi-dark-card h3 {
+        font-size: 1.25rem !important;
+    }
 }
 
 /* ========================================

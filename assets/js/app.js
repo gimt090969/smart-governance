@@ -21,9 +21,13 @@ const NAV_ITEMS = [
     { href: 'digital-data-scholars.html', icon: 'fa-solid fa-graduation-cap', label: 'ปราชญ์ชุมชน', key: 'digital-data-scholars', depts: [], parent: 'digital-data-dashboard' },
     { href: 'digital-data-leaders.html', icon: 'fa-solid fa-people-group', label: 'ผู้นำ/อาสาสมัคร', key: 'digital-data-leaders', depts: [], parent: 'digital-data-dashboard' },
     { href: 'secretary.html', icon: 'fa-solid fa-building-user', label: 'สำนักปลัด', key: 'secretary', depts: ['สำนักปลัด'] },
-    { href: 'secretary-docs.html', icon: 'fa-solid fa-file-signature', label: 'งานสารบรรณ', key: 'secretary-docs', depts: ['สำนักปลัด'], parent: 'secretary' },
+    { href: 'secretary-documents.html', icon: 'fa-solid fa-file-signature', label: 'งานสารบรรณ', key: 'secretary-documents', depts: ['สำนักปลัด'], parent: 'secretary' },
     { href: 'secretary-meetings.html', icon: 'fa-solid fa-calendar-check', label: 'งานประชุม', key: 'secretary-meetings', depts: ['สำนักปลัด'], parent: 'secretary' },
-    { href: 'secretary-hr.html', icon: 'fa-solid fa-users-gear', label: 'งานบุคลากร', key: 'secretary-hr', depts: ['สำนักปลัด'], parent: 'secretary' },
+    { href: 'secretary-attendance.html', icon: 'fa-solid fa-camera', label: 'ระบบลงเวลาใบหน้า', key: 'secretary-attendance', depts: ['สำนักปลัด'], parent: 'secretary' },
+    { href: 'secretary-leave.html', icon: 'fa-solid fa-envelope-open-text', label: 'ระบบลางานออนไลน์', key: 'secretary-leave', depts: ['สำนักปลัด'], parent: 'secretary' },
+    { href: 'secretary-vehicle.html', icon: 'fa-solid fa-car', label: 'ระบบขอใช้รถราชการ', key: 'secretary-vehicle', depts: ['สำนักปลัด'], parent: 'secretary' },
+    { href: 'secretary-calendar.html', icon: 'fa-solid fa-calendar-days', label: 'ปฏิทินงานองค์กร', key: 'secretary-calendar', depts: ['สำนักปลัด'], parent: 'secretary' },
+    { href: 'secretary-cctv.html', icon: 'fa-solid fa-video', label: 'ระบบกล้อง CCTV', key: 'secretary-cctv', depts: ['สำนักปลัด'], parent: 'secretary' },
     { href: 'secretary-complaints.html', icon: 'fa-solid fa-headset', label: 'งานร้องเรียน', key: 'secretary-complaints', depts: ['สำนักปลัด'], parent: 'secretary' },
     { href: 'finance.html', icon: 'fa-solid fa-file-invoice-dollar', label: 'กองคลัง', key: 'finance', depts: ['กองคลัง'] },
     { href: 'waste-dashboard.html', icon: 'fa-solid fa-trash-can', label: 'ค่าธรรมเนียมขยะ', key: 'waste-dashboard', depts: ['กองคลัง'], parent: 'finance' },
@@ -43,7 +47,36 @@ const NAV_ITEMS = [
     { href: 'publicworks-electric-map.html', icon: 'fa-solid fa-map-location-dot', label: 'แผนที่เสาไฟ', key: 'publicworks-electric-map', depts: ['กองช่าง'], parent: 'publicworks-electric' },
     { href: 'publicworks-electric-stock.html', icon: 'fa-solid fa-boxes-stacked', label: 'คลังอุปกรณ์', key: 'publicworks-electric-stock', depts: ['กองช่าง'], parent: 'publicworks-electric' },
     { href: 'publicworks-electric-staff.html', icon: 'fa-solid fa-users', label: 'เจ้าหน้าที่ไฟฟ้า', key: 'publicworks-electric-staff', depts: ['กองช่าง'], parent: 'publicworks-electric' },
+    { href: 'digital-infrastructure-dashboard.html', icon: 'fa-solid fa-server', label: 'Digital Infrastructure', key: 'digital-infrastructure-dashboard', depts: ['กองช่าง'], parent: 'publicworks' },
+    { href: 'digital-infrastructure-map.html', icon: 'fa-solid fa-map-location-dot', label: 'แผนที่โครงสร้างพื้นฐาน', key: 'digital-infrastructure-map', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
+    { href: 'digital-infrastructure-roads.html', icon: 'fa-solid fa-road', label: 'ทะเบียนถนนและโครงข่าย', key: 'digital-infrastructure-roads', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
+    { href: 'digital-infrastructure-water.html', icon: 'fa-solid fa-droplet', label: 'แหล่งน้ำและเส้นทางน้ำ', key: 'digital-infrastructure-water', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
+    { href: 'digital-infrastructure-public-land.html', icon: 'fa-solid fa-tree', label: 'ที่สาธารณประโยชน์', key: 'digital-infrastructure-public-land', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
+    { href: 'digital-infrastructure-boundary.html', icon: 'fa-solid fa-draw-polygon', label: 'แนวเขตและหลักเขต', key: 'digital-infrastructure-boundary', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
+    { href: 'digital-infrastructure-repairs.html', icon: 'fa-solid fa-wrench', label: 'ประวัติการซ่อมบำรุง', key: 'digital-infrastructure-repairs', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
+    { href: 'digital-infrastructure-permits.html', icon: 'fa-solid fa-file-signature', label: 'E-Permit & ขอทุน', key: 'digital-infrastructure-permits', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
     { href: 'health.html', icon: 'fa-solid fa-leaf', label: 'กองสาธารณสุขฯ', key: 'health', depts: ['กองสาธารณสุขฯ'] },
+    { href: 'healthcare-dashboard.html', icon: 'fa-solid fa-hand-holding-heart', label: 'ระบบดูแลกลุ่มเปราะบางและผู้ที่มีภาวะพึ่งพิง', key: 'ph-vulnerable', depts: ['กองสาธารณสุขฯ'], parent: 'health' },
+    { href: 'healthcare-dashboard.html', icon: 'fa-solid fa-chart-pie', label: 'แดชบอร์ดผู้บริหาร', key: 'healthcare-dashboard', depts: ['กองสาธารณสุขฯ'], parent: 'ph-vulnerable' },
+    { href: 'ph-elderly.html', icon: 'fa-solid fa-person-cane', label: 'ข้อมูลผู้สูงอายุ', key: 'ph-elderly', depts: ['กองสาธารณสุขฯ'], parent: 'ph-vulnerable' },
+    { href: 'ph-disabled.html', icon: 'fa-solid fa-wheelchair', label: 'ข้อมูลผู้พิการ', key: 'ph-disabled', depts: ['กองสาธารณสุขฯ'], parent: 'ph-vulnerable' },
+    { href: 'ph-bedridden.html', icon: 'fa-solid fa-bed-pulse', label: 'ข้อมูลผู้ป่วยติดเตียง', key: 'ph-bedridden', depts: ['กองสาธารณสุขฯ'], parent: 'ph-vulnerable' },
+    { href: 'ph-dependent.html', icon: 'fa-solid fa-hospital-user', label: 'ฐานข้อมูลผู้ที่มีภาวะพึ่งพิง', key: 'ph-dependent', depts: ['กองสาธารณสุขฯ'], parent: 'ph-vulnerable' },
+    { href: 'cg-dashboard.html', icon: 'fa-solid fa-user-nurse', label: 'Care Giver (CG)', key: 'cg-dashboard', depts: ['กองสาธารณสุขฯ'], parent: 'ph-vulnerable' },
+    { href: 'cm-dashboard.html', icon: 'fa-solid fa-user-doctor', label: 'Care Manager (CM)', key: 'cm-dashboard', depts: ['กองสาธารณสุขฯ'], parent: 'ph-vulnerable' },
+    { href: 'ph-ems-dashboard.html', icon: 'fa-solid fa-ambulance', label: 'ระบบงานรถฉุกเฉิน EMS อัจฉริยะ', key: 'ph-ems', depts: ['กองสาธารณสุขฯ'], parent: 'health' },
+    { href: 'ph-ems-dashboard.html', icon: 'fa-solid fa-chart-line', label: 'Dashboard', key: 'ph-ems-dashboard', depts: ['กองสาธารณสุขฯ'], parent: 'ph-ems' },
+    { href: 'ph-ems-incident.html', icon: 'fa-solid fa-phone-volume', label: 'รับแจ้งเหตุฉุกเฉิน', key: 'ph-ems-incident', depts: ['กองสาธารณสุขฯ'], parent: 'ph-ems' },
+    { href: 'ph-ems-dispatch.html', icon: 'fa-solid fa-satellite-dish', label: 'ศูนย์สั่งการ EMS', key: 'ph-ems-dispatch', depts: ['กองสาธารณสุขฯ'], parent: 'ph-ems' },
+    { href: 'ph-ems-gps.html', icon: 'fa-solid fa-location-crosshairs', label: 'GPS ติดตามรถ', key: 'ph-ems-gps', depts: ['กองสาธารณสุขฯ'], parent: 'ph-ems' },
+    { href: 'ph-ems-vehicles.html', icon: 'fa-solid fa-truck-medical', label: 'ข้อมูลรถ EMS', key: 'ph-ems-vehicles', depts: ['กองสาธารณสุขฯ'], parent: 'ph-ems' },
+    { href: 'ph-ems-maintenance.html', icon: 'fa-solid fa-screwdriver-wrench', label: 'ซ่อมบำรุงรถ', key: 'ph-ems-maintenance', depts: ['กองสาธารณสุขฯ'], parent: 'ph-ems' },
+    { href: 'ph-ems-personnel.html', icon: 'fa-solid fa-user-nurse', label: 'บุคลากร EMS', key: 'ph-ems-personnel', depts: ['กองสาธารณสุขฯ'], parent: 'ph-ems' },
+    { href: 'ph-ems-shifts.html', icon: 'fa-solid fa-calendar-day', label: 'เวรปฏิบัติงาน', key: 'ph-ems-shifts', depts: ['กองสาธารณสุขฯ'], parent: 'ph-ems' },
+    { href: 'ph-ems-pcr.html', icon: 'fa-solid fa-file-medical', label: 'Patient Care Report', key: 'ph-ems-pcr', depts: ['กองสาธารณสุขฯ'], parent: 'ph-ems' },
+    { href: 'ph-ems-gis.html', icon: 'fa-solid fa-map-location-dot', label: 'GIS และแผนที่', key: 'ph-ems-gis', depts: ['กองสาธารณสุขฯ'], parent: 'ph-ems' },
+    { href: 'ph-ems-reports.html', icon: 'fa-solid fa-file-contract', label: 'รายงานและ KPI', key: 'ph-ems-reports', depts: ['กองสาธารณสุขฯ'], parent: 'ph-ems' },
+    { href: 'ph-ems-settings.html', icon: 'fa-solid fa-gear', label: 'ตั้งค่าระบบ', key: 'ph-ems-settings', depts: ['กองสาธารณสุขฯ'], parent: 'ph-ems' },
     { href: 'education.html', icon: 'fa-solid fa-graduation-cap', label: 'กองการศึกษา', key: 'education', depts: ['กองการศึกษา'] },
     { href: 'childdev-dashboard.html', icon: 'fa-solid fa-child-reaching', label: 'ศูนย์พัฒนาเด็กเล็ก', key: 'childdev-dashboard', depts: ['กองการศึกษา'], parent: 'education' },
     { href: 'childdev-students.html', icon: 'fa-solid fa-id-card', label: 'ข้อมูลนักเรียน', key: 'childdev-students', depts: ['กองการศึกษา'], parent: 'childdev-dashboard' },
@@ -57,6 +90,10 @@ const NAV_ITEMS = [
     { href: 'childdev-reports.html', icon: 'fa-solid fa-chart-column', label: 'รายงาน', key: 'childdev-reports', depts: ['กองการศึกษา'], parent: 'childdev-dashboard' },
     { href: 'childdev-classroom.html', icon: 'fa-solid fa-chalkboard-user', label: 'จัดการห้องเรียน', key: 'childdev-classroom', depts: ['กองการศึกษา'], parent: 'childdev-dashboard' },
     { href: 'welfare.html', icon: 'fa-solid fa-hands-holding-child', label: 'กองสวัสดิการฯ', key: 'welfare', depts: ['กองสวัสดิการฯ'] },
+    { href: 'welfare-elderly.html', icon: 'fa-solid fa-person-cane', label: 'ข้อมูลผู้สูงอายุ', key: 'welfare-elderly', depts: ['กองสวัสดิการฯ'], parent: 'welfare' },
+    { href: 'welfare-disabled.html', icon: 'fa-solid fa-wheelchair', label: 'ข้อมูลผู้พิการ', key: 'welfare-disabled', depts: ['กองสวัสดิการฯ'], parent: 'welfare' },
+    { href: 'welfare-bedridden.html', icon: 'fa-solid fa-bed-pulse', label: 'ข้อมูลผู้ป่วยติดเตียง', key: 'welfare-bedridden', depts: ['กองสวัสดิการฯ'], parent: 'welfare' },
+    { href: 'welfare-newborn.html', icon: 'fa-solid fa-baby', label: 'ข้อมูลเด็กแรกเกิด', key: 'welfare-newborn', depts: ['กองสวัสดิการฯ'], parent: 'welfare' },
     { href: 'planning.html', icon: 'fa-solid fa-chart-line', label: 'กองยุทธศาสตร์ฯ', key: 'planning', depts: ['กองยุทธศาสตร์ฯ'] },
 ];
 
@@ -103,26 +140,33 @@ function buildSidebar(activeKey) {
         <ul class="list-unstyled components" id="nav-list">
             <li class="sidebar-section-label">เมนูหลัก</li>
             ${filteredNav.map(item => {
-                // If it's a 3rd level item (parent is a sub-menu)
-                if (item.parent && item.parent.includes('-')) {
-                    // Only show if the active page is this item itself, OR it shares the same parent, OR its parent is the active page
-                    const isFamily = (activeKey === item.parent) || (activeParentKey === item.parent) || (activeKey === item.key);
-                    if (!isFamily) return '';
-                    return `
-                        <li class="${item.key === activeKey ? 'active' : ''} ms-4 border-start border-white border-opacity-10 ps-2" style="border-left-width: 2px !important;">
-                            <a href="${item.href}" class="py-1 text-xs opacity-75 hover:opacity-100" style="padding-left: 1rem !important; font-size: 0.75rem;">
-                                <i class="${item.icon} fa-xs" style="width: 20px; text-align: center;"></i>
-                                <span>${item.label}</span>
-                            </a>
-                        </li>
-                    `;
+                // Determine level based on parent
+                let level = 1;
+                let currentParent = item.parent;
+                while (currentParent) {
+                    level++;
+                    const parentItem = NAV_ITEMS.find(i => i.key === currentParent);
+                    currentParent = parentItem ? parentItem.parent : null;
                 }
                 
-                // Normal 1st and 2nd level items
+                // For level 3+, we only show them if they are in the active tree
+                if (level >= 3) {
+                    let isFamily = false;
+                    let curr = activeItem;
+                    while (curr) {
+                        if (curr.parent === item.parent || curr.key === item.parent || curr.key === item.key) {
+                            isFamily = true;
+                            break;
+                        }
+                        curr = NAV_ITEMS.find(i => i.key === curr.parent);
+                    }
+                    if (!isFamily) return '';
+                }
+                
                 return `
-                <li class="${item.key === activeKey ? 'active' : ''} ${item.parent ? 'ms-3 border-start border-white border-opacity-10 ps-2' : ''}">
-                    <a href="${item.href}" class="${item.parent ? 'py-1 text-xs opacity-75 hover:opacity-100' : ''}" style="${item.parent ? 'padding-left: 1rem !important;' : ''}">
-                        <i class="${item.icon} ${item.parent ? 'fa-xs' : ''}" style="width: 20px; text-align: center;"></i>
+                <li class="nav-level-${Math.min(level, 3)} ${item.key === activeKey ? 'active' : ''}">
+                    <a href="${item.href}">
+                        <i class="${item.icon}"></i>
                         <span>${item.label}</span>
                     </a>
                 </li>
