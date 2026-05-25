@@ -328,7 +328,7 @@
 
     function initGISMap() {
         // อิงพิกัดกลางตำบลจากที่ตรวจจับได้
-        map = L.map('gisMasterMap').setView([17.975, 103.472], 13.5);
+        map = L.map('gisMasterMap');
 
         // แผนที่ฐานดาวเทียมและถนน
         const googleStreets = L.tileLayer('http://mt0.google.com/vt/lyrs=m&hl=th&x={x}&y={y}&z={z}', {
@@ -756,6 +756,8 @@
         
         if(allBounds.isValid()) {
             map.fitBounds(allBounds, { padding: [50, 50] });
+        } else {
+            map.setView([14.882, 100.414], 13.5);
         }
     }
 
