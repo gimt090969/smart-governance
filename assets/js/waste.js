@@ -1,7 +1,7 @@
 /**
  * waste.js — Waste Fee Collection System
  * Mock Data + Core Logic + localStorage Helpers
- * Smart Connect Municipality Platform
+ * GOOD GOV Municipality Platform
  */
 
 // ============================================

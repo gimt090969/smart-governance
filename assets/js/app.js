@@ -132,8 +132,8 @@ function buildSidebar(activeKey) {
     sidebar.innerHTML = `
         <div class="sidebar-header d-flex flex-column align-items-center text-center">
             <img src="https://drive.google.com/thumbnail?id=1cPWRFVoN48eV6lJVS9E7nd2Mi7y5IQj8&sz=w200"
-                 alt="Smart Connect" style="max-height:60px; border-radius: 12px; margin-bottom: 0.75rem;">
-            <h6 class="fw-bold mb-1">Smart Connect</h6>
+                 alt="GOOD GOV" style="max-height:60px; border-radius: 12px; margin-bottom: 0.75rem;">
+            <h6 class="fw-bold mb-1">GOOD GOV</h6>
             <small id="sidebar-role-label" class="opacity-75">กำลังโหลด...</small>
         </div>
 

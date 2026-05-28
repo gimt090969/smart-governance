@@ -131,7 +131,7 @@ function exportDailyPDF() {
         '</tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody>' +
         '</table>' +
-        '<div class="report-footer">เอกสารนี้สร้างโดยระบบ Smart Connect — เทศบาลเมืองบ้านเป็ด</div>' +
+        '<div class="report-footer">เอกสารนี้สร้างโดยระบบ GOOD GOV — เทศบาลเมืองบ้านเป็ด</div>' +
         '</body></html>';
 
     var w = window.open('', '_blank', 'width=1000,height=700');
@@ -213,7 +213,7 @@ function exportMonthlyPDF() {
         '</tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody>' +
         '</table>' +
-        '<div class="report-footer">เอกสารนี้สร้างโดยระบบ Smart Connect — เทศบาลเมืองบ้านเป็ด</div>' +
+        '<div class="report-footer">เอกสารนี้สร้างโดยระบบ GOOD GOV — เทศบาลเมืองบ้านเป็ด</div>' +
         '</body></html>';
 
     var w = window.open('', '_blank', 'width=900,height=700');
@@ -299,7 +299,7 @@ function exportAllPDF() {
         '</tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody>' +
         '</table>' +
-        '<div class="report-footer">เอกสารนี้สร้างโดยระบบ Smart Connect — เทศบาลเมืองบ้านเป็ด</div>' +
+        '<div class="report-footer">เอกสารนี้สร้างโดยระบบ GOOD GOV — เทศบาลเมืองบ้านเป็ด</div>' +
         '</body></html>';
 
     var w = window.open('', '_blank', 'width=1000,height=700');

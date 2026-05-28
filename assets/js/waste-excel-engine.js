@@ -1,6 +1,6 @@
 /**
  * waste-excel-engine.js — AI Excel Import & Smart Payment Mapping Engine
- * Smart Connect Municipality Platform
+ * GOOD GOV Municipality Platform
  */
 
 // ============================================

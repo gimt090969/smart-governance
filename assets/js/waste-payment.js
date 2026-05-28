@@ -21,7 +21,7 @@ function printReceiptA4(payment) {
     .footer{text-align:center;margin-top:30px;font-size:12px;color:#9ca3af;border-top:1px dashed #d1d5db;padding-top:15px}
     .qr{text-align:center;margin:15px 0} @media print{body{padding:20px}}</style></head><body>
     <div class="header"><img src="${logo}" alt="Logo"><h2>ใบเสร็จรับเงินค่าธรรมเนียมขยะมูลฝอย</h2>
-    <p style="margin:0;font-size:13px;color:#6b7280">เทศบาลตำบล Smart Connect</p></div>
+    <p style="margin:0;font-size:13px;color:#6b7280">เทศบาลตำบล GOOD GOV</p></div>
     <div class="info-grid">
     <div class="info-item"><div class="info-label">เลขที่ใบเสร็จ</div><div class="info-value">${payment.receipt_no}</div></div>
     <div class="info-item"><div class="info-label">วันที่</div><div class="info-value">${payment.date}</div></div>
@@ -35,7 +35,7 @@ function printReceiptA4(payment) {
     <div class="info-item"><div class="info-label">เจ้าหน้าที่</div><div class="info-value">${payment.staff||'-'}</div></div>
     <div class="info-item"><div class="info-label">เวลา</div><div class="info-value">${payment.time||''}</div></div>
     </div>
-    <div class="footer"><p>เอกสารนี้ออกโดยระบบ Smart Connect</p></div>
+    <div class="footer"><p>เอกสารนี้ออกโดยระบบ GOOD GOV</p></div>
     </body></html>`);
     w.document.close();
     setTimeout(() => w.print(), 500);
@@ -49,7 +49,7 @@ function printReceiptSlip(payment) {
     .center{text-align:center} h3{margin:5px 0;font-size:14px} hr{border:none;border-top:1px dashed #ccc;margin:8px 0}
     .row{display:flex;justify-content:space-between;margin:3px 0} .total{font-size:18px;font-weight:700;color:#057a55;text-align:center;margin:10px 0}
     </style></head><body>
-    <div class="center"><h3>ใบเสร็จค่าขยะมูลฝอย</h3><p style="margin:2px 0;font-size:11px">เทศบาลตำบล Smart Connect</p></div><hr>
+    <div class="center"><h3>ใบเสร็จค่าขยะมูลฝอย</h3><p style="margin:2px 0;font-size:11px">เทศบาลตำบล GOOD GOV</p></div><hr>
     <div class="row"><span>เลขที่:</span><span>${payment.receipt_no}</span></div>
     <div class="row"><span>วันที่:</span><span>${payment.date}</span></div><hr>
     <div class="row"><span>ชื่อ:</span><span>${payment.customer_name}</span></div>
@@ -58,7 +58,7 @@ function printReceiptSlip(payment) {
     <div class="row"><span>ช่องทาง:</span><span>${payment.method}</span></div><hr>
     <div class="total">฿${formatMoneyDecimal(payment.amount)}</div><hr>
     <div class="row"><span>เจ้าหน้าที่:</span><span>${payment.staff||'-'}</span></div>
-    <div class="center" style="margin-top:10px;font-size:10px;color:#999">Smart Connect System</div>
+    <div class="center" style="margin-top:10px;font-size:10px;color:#999">GOOD GOV System</div>
     </body></html>`);
     w.document.close();
     setTimeout(() => w.print(), 500);

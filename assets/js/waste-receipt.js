@@ -59,7 +59,7 @@ function buildReceiptHTML(p) {
         '<div class="info-box"><div class="info-label">เจ้าหน้าที่</div><div class="info-value">' + (p.staff || '-') + '</div></div>' +
         '<div class="info-box"><div class="info-label">เวลา</div><div class="info-value">' + (p.time || '-') + '</div></div>' +
         '</div>' +
-        '<div class="footer">เอกสารนี้ออกโดยระบบ Smart Connect &mdash; ' + cfg.orgName + '</div>' +
+        '<div class="footer">เอกสารนี้ออกโดยระบบ GOOD GOV &mdash; ' + cfg.orgName + '</div>' +
         '</div></body></html>';
 }
 
