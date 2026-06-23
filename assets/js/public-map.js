@@ -15,16 +15,16 @@ let layers = {
 };
 
 let activeLayers = {
-    roads: true,
-    plannedRoads: true,
-    water: true,
-    waterways: true,
-    drainage: true,
-    lighting: true,
-    publicLand: true,
+    roads: false,
+    plannedRoads: false,
+    water: false,
+    waterways: false,
+    drainage: false,
+    lighting: false,
+    publicLand: false,
     boundarySubdistrict: true,
-    boundaryVillage: true,
-    boundaryMarker: true
+    boundaryVillage: false,
+    boundaryMarker: false
 };
 
 let userMarker = null;
@@ -168,9 +168,11 @@ function initMap() {
         document.getElementById('publicMap').classList.add('hide-village-labels');
     }
 
-    // Add all layers to map initially
-    Object.values(layers).forEach(group => {
-        map.addLayer(group);
+    // Add active layers to map initially
+    Object.keys(activeLayers).forEach(key => {
+        if (activeLayers[key]) {
+            map.addLayer(layers[key]);
+        }
     });
 }
 
