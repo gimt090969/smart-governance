@@ -50,6 +50,50 @@ const WASTE_DEFAULT_CUSTOMERS = [
 const WASTE_MONTHS = ['ต.ค.','พ.ย.','ธ.ค.','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.'];
 const WASTE_MONTH_KEYS = ['oct','nov','dec','jan','feb','mar','apr','may','jun','jul','aug','sep'];
 
+function applyStartDateExemptions(ms) {
+    const customers = typeof getWasteCustomers === 'function' ? getWasteCustomers() : [];
+    const now = new Date();
+    const currentFy = now.getMonth() >= 9 ? now.getFullYear() + 544 : now.getFullYear() + 543;
+    
+    customers.forEach(c => {
+        if (!c.start_date || c.start_date === '') return;
+        
+        const d = new Date(c.start_date);
+        if (isNaN(d.getTime())) return;
+        
+        const startYear = d.getFullYear(); 
+        const startMonth = d.getMonth(); 
+        const startFy = startMonth >= 9 ? startYear + 544 : startYear + 543;
+        
+        if (!ms[c.id]) ms[c.id] = {};
+        
+        for (let fy = 2567; fy <= currentFy + 2; fy++) {
+            if (!ms[c.id][fy]) ms[c.id][fy] = {};
+            
+            WASTE_MONTH_KEYS.forEach((mk, i) => {
+                if (ms[c.id][fy][mk] === 'paid' || ms[c.id][fy][mk] === 'pending') return;
+                
+                if (fy < startFy) {
+                    ms[c.id][fy][mk] = 'exempted';
+                } else if (fy === startFy) {
+                    const keyMonth = i < 3 ? i + 9 : i - 3;
+                    
+                    if (startMonth >= 9) {
+                        if (keyMonth >= 9 && keyMonth < startMonth) {
+                            ms[c.id][fy][mk] = 'exempted';
+                        }
+                    } else {
+                        if (keyMonth >= 9 || keyMonth < startMonth) {
+                            ms[c.id][fy][mk] = 'exempted';
+                        }
+                    }
+                }
+            });
+        }
+    });
+    return ms;
+}
+
 // Generate monthly status for each customer with Fiscal Year support
 function generateDefaultMonthlyStatus() {
     const statuses = {};
@@ -137,18 +181,48 @@ const STORAGE_KEYS = {
     registerReqs: 'waste_register_requests',
     cancelReqs: 'waste_cancel_requests',
     receiptCounter: 'waste_receipt_counter',
-    customYears: 'waste_custom_years'
+    customYears: 'waste_custom_years',
+    exemptions: 'waste_exemptions',
+    settings: 'waste_settings',
+    feeHistory: 'waste_fee_history'
 };
 
+let stateSettings = null;
+async function fetchWasteSettings() {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const { data, error } = await supabaseClient.from('waste_settings').select('*').limit(1);
+        if (!error && data && data.length > 0) {
+            stateSettings = data[0];
+            localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(data[0]));
+            return;
+        }
+    }
+    stateSettings = JSON.parse(localStorage.getItem(STORAGE_KEYS.settings) || '{}');
+}
+
 function initWasteData() {
-    if (!localStorage.getItem(STORAGE_KEYS.feeTypes)) localStorage.setItem(STORAGE_KEYS.feeTypes, JSON.stringify(WASTE_DEFAULT_FEE_TYPES));
-    if (!localStorage.getItem(STORAGE_KEYS.customers)) localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify(WASTE_DEFAULT_CUSTOMERS));
+    if (!localStorage.getItem(STORAGE_KEYS.feeTypes)) {
+        if (typeof supabaseClient === 'undefined' || !supabaseClient) {
+            localStorage.setItem(STORAGE_KEYS.feeTypes, JSON.stringify(WASTE_DEFAULT_FEE_TYPES));
+        } else {
+            localStorage.setItem(STORAGE_KEYS.feeTypes, JSON.stringify([]));
+        }
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.customers)) {
+        if (typeof supabaseClient === 'undefined' || !supabaseClient) {
+            localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify(WASTE_DEFAULT_CUSTOMERS));
+        } else {
+            localStorage.setItem(STORAGE_KEYS.customers, JSON.stringify([]));
+        }
+    }
     if (!localStorage.getItem(STORAGE_KEYS.payments)) localStorage.setItem(STORAGE_KEYS.payments, JSON.stringify(generateDefaultPayments()));
     if (!localStorage.getItem(STORAGE_KEYS.monthlyStatus)) localStorage.setItem(STORAGE_KEYS.monthlyStatus, JSON.stringify(generateDefaultMonthlyStatus()));
     if (!localStorage.getItem(STORAGE_KEYS.staff)) localStorage.setItem(STORAGE_KEYS.staff, JSON.stringify(WASTE_DEFAULT_STAFF));
     if (!localStorage.getItem(STORAGE_KEYS.registerReqs)) localStorage.setItem(STORAGE_KEYS.registerReqs, JSON.stringify(WASTE_DEFAULT_REGISTER_REQUESTS));
     if (!localStorage.getItem(STORAGE_KEYS.cancelReqs)) localStorage.setItem(STORAGE_KEYS.cancelReqs, JSON.stringify(WASTE_DEFAULT_CANCEL_REQUESTS));
     if (!localStorage.getItem(STORAGE_KEYS.receiptCounter)) localStorage.setItem(STORAGE_KEYS.receiptCounter, '20');
+    if (!localStorage.getItem(STORAGE_KEYS.exemptions)) localStorage.setItem(STORAGE_KEYS.exemptions, JSON.stringify([]));
+    if (!localStorage.getItem(STORAGE_KEYS.feeHistory)) localStorage.setItem(STORAGE_KEYS.feeHistory, JSON.stringify([]));
 }
 
 function getWasteData(key) {
@@ -161,13 +235,41 @@ function saveWasteData(key, data) {
 }
 
 // Global state for caching when using Supabase
-let stateFeeTypes = [];
-let stateCustomers = [];
-let statePayments = [];
+let stateFeeTypes = null;
+let stateCustomers = null;
+let statePayments = null;
 let stateMonthlyStatus = null;
-let stateStaff = [];
-let stateRegisterReqs = [];
-let stateCancelReqs = [];
+let stateStaff = null;
+let stateRegisterReqs = null;
+let stateCancelReqs = null;
+
+// Helper for fetching more than 1000 rows
+async function fetchAllFromSupabase(table, orderCol = 'id', ascending = true) {
+    if (typeof supabaseClient === 'undefined' || !supabaseClient) return { data: null, error: 'No client' };
+    
+    // First, get the total count for parallel fetching
+    const { count, error: countError } = await supabaseClient.from(table).select('*', { count: 'exact', head: true });
+    if (countError) return { data: null, error: countError };
+    
+    if (count === 0) return { data: [], error: null };
+    
+    const limit = 1000;
+    const promises = [];
+    for (let from = 0; from < count; from += limit) {
+        promises.push(
+            supabaseClient.from(table).select('*').order(orderCol, { ascending: ascending }).range(from, from + limit - 1)
+        );
+    }
+    
+    const results = await Promise.all(promises);
+    let allData = [];
+    for (const res of results) {
+        if (res.error) return { data: null, error: res.error };
+        if (res.data) allData = allData.concat(res.data);
+    }
+    
+    return { data: allData, error: null };
+}
 
 // Fallback logic for Fee Types
 async function fetchWasteFeeTypes() {
@@ -185,7 +287,7 @@ async function fetchWasteFeeTypes() {
 }
 
 function getWasteFeeTypes() {
-    return stateFeeTypes.length > 0 ? stateFeeTypes : getWasteData('feeTypes');
+    return stateFeeTypes !== null ? stateFeeTypes : getWasteData('feeTypes');
 }
 
 async function saveWasteFeeTypesDB(dataList) {
@@ -195,9 +297,6 @@ async function saveWasteFeeTypesDB(dataList) {
             const { error } = await supabaseClient.from('waste_fee_types').upsert({ id: data.id, type: data.type, fee: data.fee });
             if (error) console.error('Error saving fee type to Supabase:', error);
         }
-        // Also handle deletions if necessary, but for simplicity we rely on local sync in this mode or we can delete records missing.
-        // Easiest is to delete all and insert, but upsert is safer. To handle deletes, we check differences.
-        // For now, save to localStorage as backup.
     }
     saveWasteData('feeTypes', dataList);
     stateFeeTypes = dataList;
@@ -209,7 +308,15 @@ function saveWasteFeeTypes(d) { saveWasteFeeTypesDB(d); }
 // Fallback logic for Customers
 async function fetchWasteCustomers() {
     if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-        const { data, error } = await supabaseClient.from('waste_customers').select('*').order('id', {ascending: true});
+        const promises = [
+            fetchAllFromSupabase('waste_customers', 'id', true)
+        ];
+        if (typeof fetchWasteFeeHistory === 'function') promises.push(fetchWasteFeeHistory());
+        if (typeof fetchWasteSettings === 'function') promises.push(fetchWasteSettings());
+        
+        const results = await Promise.allSettled(promises);
+        const { data, error } = results[0].value || {};
+
         if (!error && data) {
             stateCustomers = data;
             return data;
@@ -222,10 +329,139 @@ async function fetchWasteCustomers() {
 }
 
 function getWasteCustomers() { 
-    return stateCustomers.length > 0 ? stateCustomers : getWasteData('customers'); 
+    if (stateCustomers !== null) return stateCustomers;
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) return [];
+    return getWasteData('customers'); 
+}
+
+// ============================================
+// FEE HISTORY — ประวัติการเปลี่ยนแปลงค่าธรรมเนียม
+// ============================================
+let stateFeeHistory = null;
+async function fetchWasteFeeHistory() {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const { data, error } = await fetchAllFromSupabase('waste_fee_history', 'change_date', false);
+        if (!error && data) {
+            stateFeeHistory = data;
+            return;
+        }
+    }
+    stateFeeHistory = getWasteData('feeHistory');
+}
+
+function getFeeHistory(customerId) {
+    let all = stateFeeHistory !== null ? stateFeeHistory : getWasteData('feeHistory');
+    if (!customerId) return all;
+    return all.filter(h => h.customer_id === customerId);
+}
+
+function addFeeHistoryEntry(customerId, oldFee, newFee, changeDate) {
+    if (!changeDate) changeDate = new Date().toISOString().split('T')[0];
+    const d = new Date(changeDate);
+    const calMonth = d.getMonth(); // 0-indexed: 0=Jan
+    const calYear = d.getFullYear();
+    // Convert calendar month to fiscal month key
+    const monthKeyMap = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+    const effectiveMonth = monthKeyMap[calMonth];
+    // Fiscal year: Oct-Dec = next year, Jan-Sep = same year
+    const fiscalYear = calMonth >= 9 ? String(calYear + 543 + 1) : String(calYear + 543);
+
+    const entry = {
+        customer_id: customerId,
+        old_fee: Number(oldFee),
+        new_fee: Number(newFee),
+        change_date: changeDate,
+        effective_month: effectiveMonth,
+        effective_fiscal_year: fiscalYear
+    };
+
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        supabaseClient.from('waste_fee_history').insert([entry]).then(({error}) => {
+            if (error) console.error('Error inserting fee history', error);
+            else fetchWasteFeeHistory(); // update state
+        });
+    }
+
+    entry.id = 'FH' + Date.now() + Math.random().toString(36).slice(-3);
+    entry.created_at = new Date().toISOString();
+    
+    const all = getWasteData('feeHistory');
+    all.push(entry);
+    saveWasteData('feeHistory', all);
+    if (stateFeeHistory) stateFeeHistory.push(entry);
+    return entry;
+}
+
+/**
+ * คำนวณค่าธรรมเนียมที่ถูกต้องสำหรับเดือนและปีงบประมาณที่ระบุ
+ * Logic: เรียง fee_history ตาม change_date แล้วหาว่าเดือนนี้ตกอยู่ก่อนหรือหลัง effective date
+ * - ถ้าไม่มี history → ใช้ค่าปัจจุบันจาก customer.fee
+ * - ถ้ามี history → คำนวณจาก chain ของการเปลี่ยนแปลง
+ */
+function getFeeForMonth(customerId, monthKey, fiscalYear) {
+    const customer = getWasteCustomers().find(c => c.id === customerId);
+    if (!customer) return 0;
+
+    const history = getFeeHistory(customerId);
+    if (!history || history.length === 0) return customer.fee;
+
+    // Convert fiscal month+year to a comparable date
+    // Fiscal year: oct-dec belong to prev calendar year, jan-sep belong to fiscal year
+    const fyNum = parseInt(fiscalYear);
+    const monthIndexInFiscal = WASTE_MONTH_KEYS.indexOf(monthKey);
+    if (monthIndexInFiscal < 0) return customer.fee;
+
+    // Get calendar year and month number for this fiscal month
+    let calYear, calMonth;
+    if (monthIndexInFiscal < 3) {
+        // oct(0), nov(1), dec(2) → calendar year = fiscalYear - 543 - 1
+        calYear = fyNum - 543 - 1;
+        calMonth = monthIndexInFiscal + 9; // oct=9, nov=10, dec=11
+    } else {
+        // jan(3)..sep(11) → calendar year = fiscalYear - 543
+        calYear = fyNum - 543;
+        calMonth = monthIndexInFiscal - 3; // jan=0, feb=1, ..., sep=8
+    }
+    // First day of this month (for comparison)
+    const monthStart = new Date(calYear, calMonth, 1);
+
+    // Sort history by change_date ascending
+    const sorted = [...history].sort((a, b) => new Date(a.change_date) - new Date(b.change_date));
+
+    // Walk through history: find what fee was active at the start of this month
+    // Before any change, the fee is the old_fee of the first change
+    let effectiveFee = sorted[0].old_fee; // original fee before any changes
+
+    for (const entry of sorted) {
+        const changeDate = new Date(entry.change_date);
+        // The change takes effect from the 1st of the change's month
+        const effectiveDate = new Date(changeDate.getFullYear(), changeDate.getMonth(), 1);
+        if (monthStart >= effectiveDate) {
+            effectiveFee = entry.new_fee;
+        } else {
+            break; // No need to check further
+        }
+    }
+
+    // If month is before the customer even started, ignore the history (which might be a mistake during creation)
+    if (customer.start_date) {
+        const startDate = new Date(customer.start_date);
+        const startMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+        if (monthStart < startMonth) {
+            return customer.fee;
+        }
+    }
+
+    return effectiveFee;
 }
 
 async function saveWasteCustomerDB(data) {
+    // Detect fee change and record history
+    const existing = getWasteCustomers().find(c => c.id === data.id);
+    if (existing && Number(existing.fee) !== Number(data.fee)) {
+        addFeeHistoryEntry(data.id, existing.fee, data.fee);
+    }
+
     if (typeof supabaseClient !== 'undefined' && supabaseClient) {
         const { data: exist } = await supabaseClient.from('waste_customers').select('id').eq('id', data.id);
         if (exist && exist.length > 0) {
@@ -275,10 +511,7 @@ function saveWasteCustomers(d) {
 // ============================================
 async function fetchWastePayments() {
     if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-        const { data, error } = await supabaseClient
-            .from('waste_payments')
-            .select('*')
-            .order('created_at', { ascending: false });
+        const { data, error } = await fetchAllFromSupabase('waste_payments', 'created_at', false);
         if (!error && data) {
             // Convert months_paid from Postgres text[] to JS array (already handled by supabase-js)
             statePayments = data;
@@ -293,7 +526,7 @@ async function fetchWastePayments() {
 }
 
 function getWastePayments() {
-    return statePayments.length > 0 ? statePayments : getWasteData('payments');
+    return statePayments !== null ? statePayments : getWasteData('payments');
 }
 
 async function saveWastePaymentDB(payment) {
@@ -335,27 +568,60 @@ function saveWastePayments(d) { saveWasteData('payments', d); statePayments = d;
 // MONTHLY STATUS — Supabase CRUD
 // ============================================
 async function fetchMonthlyStatus() {
+    let ms = {};
     if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-        const { data, error } = await supabaseClient
-            .from('waste_monthly_status')
-            .select('*');
+        const fetchStatusPromise = fetchAllFromSupabase('waste_monthly_status', 'id', true);
+        const fetchExemptionsPromise = typeof fetchWasteExemptions === 'function' ? fetchWasteExemptions() : Promise.resolve(getWasteExemptions());
+        
+        const [statusResult, exemptionsResult] = await Promise.allSettled([fetchStatusPromise, fetchExemptionsPromise]);
+        const { data, error } = statusResult.value || {};
+        const exemptions = exemptionsResult.status === 'fulfilled' ? exemptionsResult.value : getWasteExemptions();
+        
         if (!error && data) {
             // Convert flat rows → nested object: { WC001: { '2568': { oct:'paid', ... } } }
-            const ms = {};
             data.forEach(row => {
                 if (!ms[row.customer_id]) ms[row.customer_id] = {};
                 if (!ms[row.customer_id][row.fiscal_year]) ms[row.customer_id][row.fiscal_year] = {};
                 ms[row.customer_id][row.fiscal_year][row.month_key] = row.status;
             });
-            stateMonthlyStatus = ms;
-            saveMonthlyStatus(ms); // backup
-            return ms;
         } else if (error) {
             console.warn('Supabase fetch monthly status error, falling back to localStorage', error);
+            ms = getMonthlyStatusLocal();
+        }
+        
+        // Merge exemptions into ms
+        if (Array.isArray(exemptions)) {
+            exemptions.forEach(ex => {
+                if (!ms[ex.customer_id]) ms[ex.customer_id] = {};
+                if (!ms[ex.customer_id][ex.fiscal_year]) ms[ex.customer_id][ex.fiscal_year] = {};
+                if (Array.isArray(ex.month_keys)) {
+                    ex.month_keys.forEach(k => {
+                        ms[ex.customer_id][ex.fiscal_year][k] = 'exempted';
+                    });
+                }
+            });
+        }
+    } else {
+        ms = getMonthlyStatusLocal();
+        const exemptions = getWasteExemptions();
+        if (Array.isArray(exemptions)) {
+            exemptions.forEach(ex => {
+                if (!ms[ex.customer_id]) ms[ex.customer_id] = {};
+                if (!ms[ex.customer_id][ex.fiscal_year]) ms[ex.customer_id][ex.fiscal_year] = {};
+                if (Array.isArray(ex.month_keys)) {
+                    ex.month_keys.forEach(k => {
+                        ms[ex.customer_id][ex.fiscal_year][k] = 'exempted';
+                    });
+                }
+            });
         }
     }
-    stateMonthlyStatus = getMonthlyStatusLocal();
-    return stateMonthlyStatus;
+    
+    ms = applyStartDateExemptions(ms);
+
+    stateMonthlyStatus = ms;
+    saveMonthlyStatus(ms); // backup
+    return ms;
 }
 
 function getMonthlyStatusLocal() {
@@ -374,12 +640,31 @@ function getMonthlyStatusLocal() {
              saveMonthlyStatus(defaultMs);
              return defaultMs;
         }
+        
+        // Merge exemptions locally
+        const exemptions = getWasteExemptions();
+        if (Array.isArray(exemptions)) {
+            exemptions.forEach(ex => {
+                if (!ms[ex.customer_id]) ms[ex.customer_id] = {};
+                if (!ms[ex.customer_id][ex.fiscal_year]) ms[ex.customer_id][ex.fiscal_year] = {};
+                if (Array.isArray(ex.month_keys)) {
+                    ex.month_keys.forEach(k => {
+                        ms[ex.customer_id][ex.fiscal_year][k] = 'exempted';
+                    });
+                }
+            });
+        }
+        
+        ms = applyStartDateExemptions(ms);
+
         return ms;
     } catch(e) { return {}; } 
 }
 
 function getMonthlyStatus() { 
-    return stateMonthlyStatus ? stateMonthlyStatus : getMonthlyStatusLocal();
+    if (stateMonthlyStatus) return stateMonthlyStatus;
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) return {};
+    return getMonthlyStatusLocal();
 }
 
 async function saveMonthlyStatusDB(customerId, fiscalYear, monthKey, status, paymentId) {
@@ -431,7 +716,7 @@ async function fetchWasteStaff() {
     return stateStaff;
 }
 
-function getWasteStaff() { return stateStaff.length > 0 ? stateStaff : getWasteData('staff'); }
+function getWasteStaff() { return stateStaff !== null ? stateStaff : getWasteData('staff'); }
 function saveWasteStaff(d) { saveWasteData('staff', d); stateStaff = d; }
 
 // GAS URL สำหรับอัปโหลดรูปภาพพนักงาน (ให้ User นำ Web App URL มาใส่ที่นี่)
@@ -440,23 +725,30 @@ const GAS_STAFF_IMG_URL = 'https://script.google.com/macros/s/AKfycbwlba_trt6vEh
 async function uploadWasteStaffImage(base64Data, filename) {
     if (!GAS_STAFF_IMG_URL) {
         console.warn('GAS_STAFF_IMG_URL is empty, skipping upload');
-        return null;
+        return base64Data;
     }
     try {
+        const b64Str = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+        const payload = { 
+            base64: b64Str, 
+            filename: filename,
+            action: 'uploadFile', // in case it uses the standard script
+            data: b64Str // in case it uses the standard script
+        };
         const res = await fetch(GAS_STAFF_IMG_URL, {
             method: 'POST',
-            body: JSON.stringify({ base64: base64Data, filename: filename })
+            body: JSON.stringify(payload)
         });
         const data = await res.json();
         if (data.success) {
             return data.imageUrl;
         } else {
             console.error('GAS Upload Error:', data.error);
-            return null;
+            return base64Data;
         }
     } catch (e) {
         console.error('Upload catch error:', e);
-        return null;
+        return base64Data;
     }
 }
 
@@ -509,7 +801,7 @@ async function fetchRegisterRequestsDB() {
     return stateRegisterReqs;
 }
 
-function getRegisterRequests() { return stateRegisterReqs.length > 0 ? stateRegisterReqs : getWasteData('registerReqs'); }
+function getRegisterRequests() { return stateRegisterReqs !== null ? stateRegisterReqs : getWasteData('registerReqs'); }
 
 async function saveRegisterRequestDB(data) {
     if (typeof supabaseClient !== 'undefined' && supabaseClient) {
@@ -524,7 +816,7 @@ async function saveRegisterRequestDB(data) {
 }
 
 function saveRegisterRequests(d) { saveWasteData('registerReqs', d); stateRegisterReqs = d; }
-function getCancelRequests() { return stateCancelReqs.length > 0 ? stateCancelReqs : getWasteData('cancelReqs'); }
+function getCancelRequests() { return stateCancelReqs !== null ? stateCancelReqs : getWasteData('cancelReqs'); }
 function saveCancelRequests(d) { saveWasteData('cancelReqs', d); stateCancelReqs = d; }
 
 async function fetchCancelRequestsDB() {
@@ -554,6 +846,77 @@ async function saveCancelRequestDB(data) {
 }
 
 // ============================================
+// EXEMPTIONS — Supabase CRUD
+// ============================================
+let stateExemptions = null;
+async function fetchWasteExemptions() {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const { data, error } = await supabaseClient.from('waste_exemptions').select('*').order('date', {ascending: false});
+        if (!error && data) {
+            stateExemptions = data;
+            saveWasteData('exemptions', data);
+            return data;
+        } else {
+            console.warn('Supabase fetch exemptions error', error);
+        }
+    }
+    stateExemptions = getWasteData('exemptions');
+    return stateExemptions;
+}
+
+function getWasteExemptions() {
+    return stateExemptions !== null ? stateExemptions : getWasteData('exemptions');
+}
+
+async function saveWasteExemptionDB(data) {
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const { error } = await supabaseClient.from('waste_exemptions').upsert(data);
+        if (error) console.error('Error saving exemption to Supabase:', error);
+    }
+    const exemptions = getWasteData('exemptions');
+    const idx = exemptions.findIndex(r => r.id === data.id);
+    if (idx >= 0) exemptions[idx] = data; else exemptions.unshift(data);
+    saveWasteData('exemptions', exemptions);
+    stateExemptions = exemptions;
+}
+
+async function cancelWasteExemptionDB(id) {
+    const exemptions = getWasteExemptions();
+    const ex = exemptions.find(e => e.id === id);
+    if (!ex) return;
+
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        const { error: delErr } = await supabaseClient.from('waste_exemptions').delete().eq('id', id);
+        if (delErr) console.error('Error deleting exemption from Supabase:', delErr);
+
+        if (ex.customer_id && ex.fiscal_year && Array.isArray(ex.month_keys)) {
+            for (const key of ex.month_keys) {
+                await supabaseClient.from('waste_monthly_status')
+                    .update({ status: 'unpaid', payment_id: null })
+                    .eq('customer_id', ex.customer_id)
+                    .eq('fiscal_year', ex.fiscal_year)
+                    .eq('month_key', key)
+                    .eq('status', 'exempted');
+            }
+        }
+    }
+
+    const newExemptions = exemptions.filter(e => e.id !== id);
+    saveWasteData('exemptions', newExemptions);
+    stateExemptions = newExemptions;
+    
+    const ms = getMonthlyStatusLocal(); // use local to not re-fetch yet
+    if (ms[ex.customer_id] && ms[ex.customer_id][ex.fiscal_year] && Array.isArray(ex.month_keys)) {
+        ex.month_keys.forEach(k => {
+            if (ms[ex.customer_id][ex.fiscal_year][k] === 'exempted') {
+                ms[ex.customer_id][ex.fiscal_year][k] = 'unpaid';
+            }
+        });
+        localStorage.setItem(STORAGE_KEYS.monthlyStatus, JSON.stringify(ms));
+    }
+}
+
+// ============================================
 // UTILITY FUNCTIONS
 // ============================================
 function generateReceiptNumber() {
@@ -561,9 +924,36 @@ function generateReceiptNumber() {
     // คำนวณปีงบประมาณ: ต.ค.-ก.ย. → ถ้าเดือน >= 10 ถือเป็นปีงบประมาณถัดไป
     const fiscalYear = String(now.getMonth() >= 9 ? now.getFullYear() + 543 + 1 : now.getFullYear() + 543);
     
-    // ใช้ counter แยกตามปีงบประมาณ เพื่อให้รีเซ็ตเมื่อขึ้นปีใหม่
+    // หาเลขที่ใบเสร็จล่าสุดจากข้อมูลที่มีอยู่ในระบบ (เพื่อรันต่อจากเลขล่าสุด)
+    const payments = getWastePayments();
+    let maxNumber = 0;
+    
+    payments.forEach(p => {
+        if (p.receipt_no && p.receipt_no.endsWith('/' + fiscalYear)) {
+            // รูปแบบ REC-00001/2569
+            const match = p.receipt_no.match(/REC-(\d+)\/\d{4}/);
+            if (match && match[1]) {
+                const num = parseInt(match[1], 10);
+                if (num > maxNumber) {
+                    maxNumber = num;
+                }
+            }
+        }
+    });
+
+    // ให้เลขที่ใบเสร็จเป็นเลขสูงสุด + 1
+    let counter = maxNumber + 1;
+    
+    // เผื่อกรณี localStorage นำหน้า (แต่ปกติอิงจากระบบจริงเป็นหลัก)
     const counterKey = STORAGE_KEYS.receiptCounter + '_' + fiscalYear;
-    let counter = parseInt(localStorage.getItem(counterKey) || '0') + 1;
+    let localCounter = parseInt(localStorage.getItem(counterKey) || '0');
+    if (localCounter > maxNumber) {
+        // ถ้าระบบยังไม่มี receipt แต่ localCounter ไปไกลแล้ว อาจจะเป็นกรณีล้างข้อมูลชั่วคราว
+        // แต่จริงๆเราอยากรันต่อจากบิลล่าสุดเสมอ
+        // counter = localCounter + 1; 
+    }
+    
+    // อัปเดตลง localStorage เผื่อการอ้างอิง
     localStorage.setItem(counterKey, String(counter));
     
     return `REC-${String(counter).padStart(5,'0')}/${fiscalYear}`;
@@ -583,7 +973,7 @@ function getCurrentFiscalYear() {
     return String(now.getMonth() >= 9 ? now.getFullYear() + 543 + 1 : now.getFullYear() + 543);
 }
 
-function calculateDebtors(year = null) {
+function calculateDebtors(year = null, startMonthIdx = 0, endMonthIdx = 11) {
     const targetYear = year || getCurrentFiscalYear();
     const customers = getWasteCustomers().filter(c => c.status === 'active');
     const ms = getMonthlyStatus();
@@ -596,10 +986,12 @@ function calculateDebtors(year = null) {
         let totalDebt = 0;
 
         WASTE_MONTH_KEYS.forEach((mk, i) => {
-            if (yearData[mk] !== 'paid') {
-                const calYear = i < 3 ? String(fyNum - 1) : targetYear;
-                unpaidMonths.push(`${WASTE_MONTHS[i]} ${calYear.substring(2)}`);
-                totalDebt += c.fee;
+            if (i >= startMonthIdx && i <= endMonthIdx) {
+                if (yearData[mk] !== 'paid') {
+                    const calYear = i < 3 ? String(fyNum - 1) : targetYear;
+                    unpaidMonths.push(`${WASTE_MONTHS[i]} ${calYear.substring(2)}`);
+                    totalDebt += c.fee;
+                }
             }
         });
 

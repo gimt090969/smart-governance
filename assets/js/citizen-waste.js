@@ -21,26 +21,59 @@ const CW_MONTH_KEYS  = ['oct','nov','dec','jan','feb','mar','apr','may','jun','j
 document.addEventListener('DOMContentLoaded', async () => {
     // Init data layer from waste.js
     if (typeof initWasteData === 'function') initWasteData();
-    if (typeof fetchWasteCustomers === 'function') await fetchWasteCustomers();
-    if (typeof fetchMonthlyStatus === 'function') await fetchMonthlyStatus();
-
-    // Build fiscal year dropdown
+    
+    // Build fiscal year dropdown immediately so it doesn't load slowly
     buildFiscalYearOptions();
 
-    // Auto-search from LINE session
+    // 1. Auto-search immediately using LocalStorage data for speed
     const session = typeof LineAuth !== 'undefined' ? LineAuth.getSession() : null;
+    let didAutoSearch = false;
     if (session) {
         if (session.houseNo) document.getElementById('searchInput').value = session.houseNo;
         if (session.moo) {
             const mooEl = document.getElementById('searchMoo');
             if (mooEl) {
-                // Ensure moo is just the number
                 let mooVal = String(session.moo).replace(/\D/g, '');
                 if (mooVal) mooEl.value = mooVal;
             }
         }
         if (session.houseNo || session.fullName || (session.firstName && session.lastName)) {
             searchCustomer(true);
+            didAutoSearch = true;
+        }
+    }
+
+    // 2. Fetch fresh data in background
+    const fetchTasks = [];
+    if (typeof fetchWasteSettings === 'function') fetchTasks.push(fetchWasteSettings());
+    if (typeof fetchWasteFeeHistory === 'function') fetchTasks.push(fetchWasteFeeHistory());
+    if (typeof fetchWasteCustomers === 'function') fetchTasks.push(fetchWasteCustomers());
+    if (typeof fetchMonthlyStatus === 'function') fetchTasks.push(fetchMonthlyStatus());
+
+    Promise.all(fetchTasks).then(() => {
+        // 3. Re-render UI when fresh data arrives
+        if (didAutoSearch) {
+            if (selectedCustomer) {
+                // Refresh months data without animation
+                loadMonthlyStatus(true); 
+            } else {
+                // Try searching again with fresh data from Supabase!
+                searchCustomer(true);
+            }
+        } else if (!didAutoSearch && session && (session.houseNo || session.fullName || (session.firstName && session.lastName))) {
+            searchCustomer(true);
+        }
+    });
+
+    // Fetch latest settings from Supabase and store in localStorage for the citizen portal
+    if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+        try {
+            const { data, error } = await supabaseClient.from('waste_settings').select('*').limit(1).single();
+            if (data && !error) {
+                localStorage.setItem('waste_settings', JSON.stringify(data));
+            }
+        } catch (e) {
+            console.error('Failed to load settings from Supabase', e);
         }
     }
 });
@@ -50,14 +83,25 @@ function buildFiscalYearOptions() {
     if (!sel) return;
     const now = new Date();
     const currentFY = now.getMonth() >= 9 ? now.getFullYear() + 544 : now.getFullYear() + 543;
-    sel.innerHTML = '';
-    for (let y = currentFY + 1; y >= currentFY - 1; y--) {
-        const opt = document.createElement('option');
-        opt.value = String(y);
-        opt.textContent = String(y);
-        if (y === currentFY) opt.selected = true;
-        sel.appendChild(opt);
+    
+    // ดึง customYears จากระบบ (ถ้ามี) แบบเดียวกับหลังบ้าน
+    const customYears = typeof getWasteData === 'function' ? getWasteData('customYears') : [];
+    const yearSet = new Set([String(currentFY - 1), String(currentFY), String(currentFY + 1)]);
+    if (Array.isArray(customYears)) {
+        customYears.forEach(y => yearSet.add(String(y)));
     }
+    
+    // เรียงจากมากไปน้อย
+    const years = Array.from(yearSet).sort((a, b) => Number(b) - Number(a));
+
+    sel.innerHTML = '';
+    years.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (y === String(currentFY)) opt.selected = true;
+        sel.appendChild(opt);
+    });
 }
 
 function onFiscalYearChange() {
@@ -116,6 +160,72 @@ function goBack() {
 // ============================================
 // STEP 1: SEARCH
 // ============================================
+
+let cwSearchTimeout = null;
+function handleSearchInput(e) {
+    if (e.key === 'Enter') {
+        document.getElementById('searchAutocomplete').style.display = 'none';
+        searchCustomer();
+        return;
+    }
+    
+    clearTimeout(cwSearchTimeout);
+    cwSearchTimeout = setTimeout(() => {
+        const q = document.getElementById('searchInput').value.trim().toLowerCase();
+        const mooEl = document.getElementById('searchMoo');
+        const moo = mooEl ? mooEl.value : '';
+        const ac = document.getElementById('searchAutocomplete');
+        
+        if (!ac) return;
+
+        if (q.length < 1) {
+            ac.style.display = 'none';
+            return;
+        }
+        
+        const customers = typeof getWasteCustomers === 'function' ? getWasteCustomers() : [];
+        const matches = customers.filter(c => {
+            if (moo && String(c.moo) !== String(moo)) return false;
+            return (c.name && c.name.toLowerCase().includes(q)) || 
+                   (c.house_no && String(c.house_no).includes(q));
+        }).slice(0, 8); // Show top 8
+        
+        if (matches.length > 0) {
+            ac.innerHTML = matches.map(c => `
+                <li><a class="dropdown-item d-flex justify-content-between align-items-center py-2 border-bottom" href="javascript:void(0)" onclick="selectAutocomplete('${c.name}', '${c.house_no}', '${c.moo||''}')" style="white-space: normal;">
+                    <div>
+                        <div class="fw-semibold text-dark" style="font-size:0.9rem;">${c.name}</div>
+                        <div class="text-muted" style="font-size:0.75rem;"><i class="fa-solid fa-house me-1"></i>บ้านเลขที่ ${c.house_no} ม.${c.moo||'-'}</div>
+                    </div>
+                    <span class="badge bg-light text-dark border">เลือก</span>
+                </a></li>
+            `).join('');
+            ac.style.display = 'block';
+        } else {
+            ac.innerHTML = `<li><div class="dropdown-item text-muted small py-3 text-center">ไม่พบข้อมูล "${q}"</div></li>`;
+            ac.style.display = 'block';
+        }
+    }, 300);
+}
+
+function selectAutocomplete(name, houseNo, moo) {
+    document.getElementById('searchInput').value = name;
+    if (moo && document.getElementById('searchMoo')) {
+        document.getElementById('searchMoo').value = moo;
+    }
+    document.getElementById('searchAutocomplete').style.display = 'none';
+    searchCustomer();
+}
+
+// Hide autocomplete when clicking outside
+document.addEventListener('click', function(e) {
+    const ac = document.getElementById('searchAutocomplete');
+    const input = document.getElementById('searchInput');
+    if (ac && input && !input.contains(e.target) && !ac.contains(e.target)) {
+        ac.style.display = 'none';
+    }
+});
+
 async function searchCustomer(isAuto = false) {
     const q = document.getElementById('searchInput').value.trim();
     const mooEl = document.getElementById('searchMoo');
@@ -132,6 +242,11 @@ async function searchCustomer(isAuto = false) {
 
     // Small delay for UX
     await new Promise(r => setTimeout(r, 300));
+
+    // Force wait for real data if not loaded yet
+    if (typeof stateCustomers !== 'undefined' && stateCustomers === null && typeof fetchWasteCustomers === 'function') {
+        await fetchWasteCustomers();
+    }
 
     const allCustomers = typeof getWasteCustomers === 'function' ? getWasteCustomers() : [];
     let matches = [];
@@ -237,41 +352,119 @@ async function selectCustomer(id) {
 
     document.getElementById('stickyAction').style.display = 'block';
     updateActionButton();
-    await loadMonthlyStatus();
-}
-
-async function loadMonthlyStatus() {
-    const year = document.getElementById('fiscalYearSelect').value;
-    const listDiv = document.getElementById('monthlyStatusList');
-    const debtBadge = document.getElementById('dispDebtBadge');
-
-    // Skeleton
-    listDiv.innerHTML = Array(4).fill('<div class="skeleton mb-2" style="height:58px;"></div>').join('');
-
-    await new Promise(r => setTimeout(r, 200));
-
-    const allStatus = typeof getMonthlyStatus === 'function' ? getMonthlyStatus() : {};
-    const customerStatus = (allStatus[selectedCustomer.id] || {})[year] || {};
-
-    // Check pending online transactions
-    let pendingMonths = [];
+    
+    // Auto-select oldest unpaid year
     try {
         if (typeof supabaseClient !== 'undefined' && supabaseClient) {
             const { data } = await supabaseClient
                 .from('garbage_payment_transactions')
-                .select('paid_months')
+                .select('fiscal_year, paid_months')
                 .eq('citizen_id', selectedCustomer.id)
-                .eq('fiscal_year', year)
                 .eq('status', 'pending');
-            if (data) data.forEach(r => { pendingMonths = pendingMonths.concat(r.paid_months); });
+            window.pendingTxMap = {};
+            if (data) {
+                data.forEach(r => {
+                    if (!window.pendingTxMap[r.fiscal_year]) window.pendingTxMap[r.fiscal_year] = [];
+                    window.pendingTxMap[r.fiscal_year] = window.pendingTxMap[r.fiscal_year].concat(r.paid_months);
+                });
+            }
         }
     } catch (e) { console.warn('Pending check failed', e); }
+
+    const allStatus = typeof getMonthlyStatus === 'function' ? getMonthlyStatus() : {};
+    const cStatus = allStatus[selectedCustomer.id] || {};
+    let oldestUnpaidYear = null;
+    const availableYears = Object.keys(cStatus).map(Number).sort((a,b)=>a-b);
+    
+    for (let y of availableYears) {
+        let hasUnpaid = false;
+        const yPending = (window.pendingTxMap || {})[y] || [];
+        for (let k of CW_MONTH_KEYS) {
+            let s = cStatus[y][k] || 'unpaid';
+            if (yPending.includes(k)) s = 'pending';
+            if (s !== 'paid' && s !== 'exempted' && s !== 'pending') {
+                hasUnpaid = true;
+                break;
+            }
+        }
+        if (hasUnpaid) {
+            oldestUnpaidYear = y;
+            break;
+        }
+    }
+    
+    const sel = document.getElementById('fiscalYearSelect');
+    if (sel) {
+        if (oldestUnpaidYear) {
+            for(let i=0; i<sel.options.length; i++) {
+                if(sel.options[i].value == oldestUnpaidYear) {
+                    sel.value = oldestUnpaidYear;
+                    break;
+                }
+            }
+        } else {
+            const now = new Date();
+            const currentFY = String(now.getMonth() >= 9 ? now.getFullYear() + 544 : now.getFullYear() + 543);
+            for(let i=0; i<sel.options.length; i++) {
+                if(sel.options[i].value == currentFY) {
+                    sel.value = currentFY;
+                    break;
+                }
+            }
+        }
+    }
+
+    await loadMonthlyStatus();
+}
+
+async function loadMonthlyStatus(noAnimate = false) {
+    const year = document.getElementById('fiscalYearSelect').value;
+    const listDiv = document.getElementById('monthlyStatusList');
+    const debtBadge = document.getElementById('dispDebtBadge');
+
+    // Skeleton only on initial load
+    if (!noAnimate) {
+        listDiv.innerHTML = Array(4).fill('<div class="skeleton mb-2" style="height:58px;"></div>').join('');
+        await new Promise(r => setTimeout(r, 200));
+    }
+
+    const allStatus = typeof getMonthlyStatus === 'function' ? getMonthlyStatus() : {};
+    const customerStatus = (allStatus[selectedCustomer.id] || {})[year] || {};
+
+    // Use cached pending map from selectCustomer
+    let pendingMonths = (window.pendingTxMap || {})[year] || [];
     currentPendingMonths = pendingMonths;
 
     let html = '';
     let totalDebt = 0;
     let unpaidCount = 0;
     let firstUnpaidIdx = -1;
+    
+    // Check if there are unpaid months in PRIOR fiscal years
+    let blockingYear = null;
+    const availableYears = Object.keys(allStatus[selectedCustomer.id] || {}).map(Number).sort((a,b)=>a-b);
+    const selectedYearNum = Number(year);
+    
+    for (let y of availableYears) {
+        if (y >= selectedYearNum) continue;
+        const yStatus = allStatus[selectedCustomer.id][y];
+        const yPending = (window.pendingTxMap || {})[y] || [];
+        let hasUnpaid = false;
+        for (let k of CW_MONTH_KEYS) {
+            let s = yStatus[k] || 'unpaid';
+            if (yPending.includes(k)) s = 'pending';
+            if (s !== 'paid' && s !== 'exempted' && s !== 'pending') {
+                hasUnpaid = true;
+                break;
+            }
+        }
+        if (hasUnpaid) {
+            blockingYear = y;
+            break;
+        }
+    }
+    
+    window.currentBlockingYear = blockingYear;
 
     CW_MONTH_KEYS.forEach((key, i) => {
         let status = customerStatus[key] || 'unpaid';
@@ -279,44 +472,69 @@ async function loadMonthlyStatus() {
 
         const isPaid = status === 'paid';
         const isPending = status === 'pending';
-        const isUnpaid = status === 'unpaid';
+        const isExempted = status === 'exempted';
+        const isUnpaid = !isPaid && !isPending && !isExempted;
 
         if (isUnpaid && firstUnpaidIdx === -1) firstUnpaidIdx = i;
 
         // A month is selectable if: unpaid AND (it IS the first unpaid OR all months before it up to firstUnpaid are selected)
-        const isLocked = isUnpaid && firstUnpaidIdx !== -1 && i > firstUnpaidIdx && !allPreviousSelected(i, firstUnpaidIdx, customerStatus, pendingMonths);
+        let isLocked = isUnpaid && firstUnpaidIdx !== -1 && i > firstUnpaidIdx && !allPreviousSelected(i, firstUnpaidIdx, customerStatus, pendingMonths);
+        let lockedReason = 'รอชำระเดือนก่อนหน้า';
+        
+        if (isUnpaid && blockingYear) {
+            isLocked = true;
+            lockedReason = `กรุณาชำระปีงบฯ ${blockingYear} ให้ครบก่อน`;
+        }
+        
         const isSelectable = isUnpaid && !isLocked;
         const isSelected = selectedMonthKeys.includes(key);
 
-        if (isUnpaid) { totalDebt += selectedCustomer.fee; unpaidCount++; }
+        let mFee = getFeeForMonth(selectedCustomer.id, key, year);
+        if (isExempted) mFee = 0;
+
+        if (isUnpaid) { totalDebt += mFee; unpaidCount++; }
 
         let rowClass = '';
         let iconClass = '';
         let label = '';
 
         if (isPaid) { rowClass = 'paid'; iconClass = 'fa-circle-check'; label = 'ชำระแล้ว'; }
+        else if (isExempted) { rowClass = 'locked'; iconClass = 'fa-minus'; label = 'ยกเว้นชำระ'; }
         else if (isPending) { rowClass = 'pending'; iconClass = 'fa-clock'; label = 'รอตรวจสอบ'; }
         else if (isSelected) { rowClass = 'selected selectable'; iconClass = 'fa-check'; label = 'เลือกแล้ว'; }
-        else if (isLocked) { rowClass = 'locked'; iconClass = 'fa-lock'; label = 'รอชำระเดือนก่อนหน้า'; }
+        else if (isLocked) { rowClass = 'locked'; iconClass = 'fa-lock'; label = lockedReason; }
         else { rowClass = 'unpaid selectable'; iconClass = 'fa-circle-xmark'; label = 'ค้างชำระ'; }
 
         const clickHandler = isSelectable || isSelected ? `onclick="toggleMonth('${key}')"` : '';
+        const animationStyle = noAnimate ? '' : `style="animation:fadeInUp 0.25s ${i * 0.04}s both;"`;
 
         html += `
-        <div class="mt-row ${rowClass}" ${clickHandler} style="animation:fadeInUp 0.25s ${i * 0.04}s both;">
+        <div class="mt-row ${rowClass}" ${clickHandler} ${animationStyle}>
             <div class="mt-icon"><i class="fa-solid ${iconClass}"></i></div>
             <div class="flex-grow-1">
                 <div class="fw-semibold">${CW_MONTH_NAMES[i]}</div>
                 <div class="small ${isUnpaid && !isLocked ? 'text-danger' : 'text-muted'}">${label}</div>
             </div>
             <div class="text-end">
-                <div class="fw-bold ${isUnpaid ? '' : 'text-muted'}" style="font-size:0.95rem;">฿${cwFmt(selectedCustomer.fee)}</div>
+                <div class="fw-bold ${isUnpaid ? '' : 'text-muted'}" style="font-size:0.95rem;">฿${cwFmt(mFee)}</div>
                 ${isSelectable && !isSelected ? '<div class="text-success small fw-bold">แตะเพื่อเลือก</div>' : ''}
             </div>
         </div>`;
     });
 
     listDiv.innerHTML = html;
+
+    // Update display fee per month in the header based on actual fees for this year
+    const yearFees = CW_MONTH_KEYS.map(k => getFeeForMonth(selectedCustomer.id, k, year));
+    const uniqueFees = [...new Set(yearFees)];
+    const feeDisplayEl = document.getElementById('dispFeePerMonth');
+    if (feeDisplayEl) {
+        if (uniqueFees.length > 1) {
+            feeDisplayEl.innerHTML = `<span title="ค่าธรรมเนียมเปลี่ยนระหว่างปี">฿${uniqueFees.map(f => cwFmt(f)).join(' → ')}</span>`;
+        } else {
+            feeDisplayEl.textContent = `฿${cwFmt(uniqueFees[0])}`;
+        }
+    }
 
     if (unpaidCount > 0) {
         debtBadge.style.display = '';
@@ -344,7 +562,7 @@ function allPreviousSelected(targetIdx, firstUnpaidIdx, customerStatus, pendingM
         const k = CW_MONTH_KEYS[j];
         const s = customerStatus[k] || 'unpaid';
         if (pendingMonths.includes(k)) continue; // pending counts as handled
-        if (s === 'paid') continue;
+        if (s === 'paid' || s === 'exempted') continue;
         if (!selectedMonthKeys.includes(k)) return false;
     }
     return true;
@@ -358,12 +576,18 @@ function toggleAllMonths() {
     const pendingMonths = currentPendingMonths;
     const allSelectable = [];
     
+    if (window.currentBlockingYear) {
+        cwToast(`กรุณาชำระปีงบฯ ${window.currentBlockingYear} ให้ครบก่อน`, 'warning');
+        return;
+    }
+    
     let firstUnpaidIdx = -1;
     for (let i = 0; i < CW_MONTH_KEYS.length; i++) {
         const k = CW_MONTH_KEYS[i];
         const s = customerStatus[k] || 'unpaid';
         const isPending = pendingMonths.includes(k);
-        if (s === 'unpaid' && !isPending) {
+        const isExempted = s === 'exempted';
+        if (s !== 'paid' && !isPending && !isExempted) {
             if (firstUnpaidIdx === -1) firstUnpaidIdx = i;
         }
     }
@@ -373,7 +597,8 @@ function toggleAllMonths() {
             const k = CW_MONTH_KEYS[i];
             const s = customerStatus[k] || 'unpaid';
             const isPending = pendingMonths.includes(k);
-            if (s === 'unpaid' && !isPending) {
+            const isExempted = s === 'exempted';
+            if (s !== 'paid' && !isPending && !isExempted) {
                 allSelectable.push(k);
             }
         }
@@ -387,7 +612,7 @@ function toggleAllMonths() {
         selectedMonthKeys = [...allSelectable];
     }
     
-    loadMonthlyStatus();
+    loadMonthlyStatus(true);
 }
 
 function toggleMonth(key) {
@@ -400,7 +625,7 @@ function toggleMonth(key) {
         selectedMonthKeys = selectedMonthKeys.filter(k => CW_MONTH_KEYS.indexOf(k) < monthIdx);
     }
     selectedMonthKeys.sort((a, b) => CW_MONTH_KEYS.indexOf(a) - CW_MONTH_KEYS.indexOf(b));
-    loadMonthlyStatus(); // re-render
+    loadMonthlyStatus(true); // re-render without animation
 }
 
 // ============================================
@@ -413,7 +638,9 @@ function updateActionButton() {
     if (currentStep === 'details') {
         if (selectedMonthKeys.length > 0) {
             btn.disabled = false;
-            const total = selectedMonthKeys.length * selectedCustomer.fee;
+            const year = document.getElementById('fiscalYearSelect').value;
+            let total = 0;
+            selectedMonthKeys.forEach(k => total += getFeeForMonth(selectedCustomer.id, k, year));
             btn.innerHTML = `ชำระเงิน ฿${cwFmt(total)} (${selectedMonthKeys.length} เดือน) <i class="fa-solid fa-arrow-right ms-1"></i>`;
         } else {
             btn.disabled = true;
@@ -447,19 +674,36 @@ function goToPayment() {
     updateStepUI();
 
     // Render summary
+    const year = document.getElementById('fiscalYearSelect').value;
     const itemsDiv = document.getElementById('payItemsList');
     itemsDiv.innerHTML = selectedMonthKeys.map(k => {
+        const mFee = getFeeForMonth(selectedCustomer.id, k, year);
         const name = CW_MONTH_NAMES[CW_MONTH_KEYS.indexOf(k)];
-        return `<div class="summary-item"><span>${name}</span><span>฿${cwFmt(selectedCustomer.fee)}</span></div>`;
+        return `<div class="summary-item"><span>${name}</span><span>฿${cwFmt(mFee)}</span></div>`;
     }).join('');
 
     document.getElementById('payCountBadge').textContent = `${selectedMonthKeys.length} เดือน`;
-    const total = selectedMonthKeys.length * selectedCustomer.fee;
+    let total = 0;
+    selectedMonthKeys.forEach(k => total += getFeeForMonth(selectedCustomer.id, k, year));
     document.getElementById('payTotalAmount').textContent = `฿${cwFmt(total)}`;
+    const saveQrTotalEl = document.getElementById('saveQrTotal');
+    if (saveQrTotalEl) saveQrTotalEl.textContent = `฿${cwFmt(total)}`;
+
+    // Load Settings
+    const settings = JSON.parse(localStorage.getItem('waste_settings') || '{}');
 
     // QR
     const qr = document.getElementById('qrImage');
-    qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=PromptPay_Amount_${total}`;
+    if (settings.qr_code_payment) {
+        qr.src = settings.qr_code_payment;
+    } else {
+        qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=PromptPay_Amount_${total}`;
+    }
+
+    // Bank
+    if (settings.bank_name) document.getElementById('bankNameDisplay').textContent = settings.bank_name;
+    if (settings.bank_account_name) document.getElementById('bankAccNameDisplay').textContent = settings.bank_account_name;
+    if (settings.bank_account) document.getElementById('bankAccNoDisplay').textContent = settings.bank_account;
 
     slipBase64 = null;
     document.getElementById('slipPreview').style.display = 'none';
@@ -476,7 +720,78 @@ function togglePayMethod() {
 }
 
 function copyAccount() {
-    navigator.clipboard.writeText('1234567890').then(() => cwToast('คัดลอกเลขบัญชีแล้ว', 'success'));
+    const settings = JSON.parse(localStorage.getItem('waste_settings') || '{}');
+    const accNo = settings.bank_account_no || '1234567890';
+    // Remove dashes for easier copying if preferred, or keep them.
+    navigator.clipboard.writeText(accNo).then(() => cwToast('คัดลอกเลขบัญชีแล้ว', 'success'));
+}
+
+// ============================================
+// SAVE QR CODE IMAGE
+// ============================================
+function saveQRCodeImage() {
+    const container = document.getElementById('qrContainerToSave');
+    if (!container) return;
+    
+    if (typeof html2canvas === 'undefined') {
+        cwToast('ระบบกำลังเตรียมความพร้อม กรุณาลองใหม่อีกครั้งในสักครู่', 'warning');
+        return;
+    }
+
+    cwToast('กำลังสร้างรูปภาพ...', 'info');
+
+    html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+    }).then(async canvas => {
+        const dataUrl = canvas.toDataURL('image/png');
+        const filename = `QR_Payment_Waste_${new Date().getTime()}.png`;
+        
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isLineApp = /Line/i.test(navigator.userAgent);
+
+        try {
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], filename, { type: 'image/png' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: 'QR Code ชำระเงิน'
+                });
+                return; // Completed share
+            }
+        } catch (e) {
+            console.log('Web Share skipped:', e);
+        }
+
+        if (isIOS || isLineApp) {
+            // Show image for long-press
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'บันทึกรูป QR Code',
+                    html: `
+                        <p class="text-muted small mb-3">ระบบ iOS ไม่รองรับการดาวน์โหลดอัตโนมัติ<br>กรุณา <b>แตะค้างที่รูปภาพด้านล่าง</b><br>แล้วเลือก <b>"บันทึกรูปภาพ"</b> หรือ "Save Image"</p>
+                        <img src="${dataUrl}" class="img-fluid rounded shadow-sm border" style="max-height: 55vh; object-fit: contain;">
+                    `,
+                    confirmButtonText: 'ปิดหน้าต่าง',
+                    confirmButtonColor: '#198754'
+                });
+            }
+        } else {
+            // PC / Standard Android
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = dataUrl;
+            link.click();
+            cwToast('บันทึกรูปลงในเครื่องสำเร็จ!', 'success');
+        }
+    }).catch(err => {
+        console.error('Error saving QR code:', err);
+        cwToast('ไม่สามารถสร้างรูปภาพได้', 'danger');
+    });
 }
 
 // ============================================
@@ -530,7 +845,9 @@ async function submitTransaction() {
 
     const year = document.getElementById('fiscalYearSelect').value;
     const method = document.querySelector('input[name="payMethod"]:checked').value;
-    const amount = selectedMonthKeys.length * selectedCustomer.fee;
+    
+    let amount = 0;
+    selectedMonthKeys.forEach(k => amount += getFeeForMonth(selectedCustomer.id, k, year));
 
     // --- Upload Slip to Google Drive ---
     let finalSlipImage = slipBase64;

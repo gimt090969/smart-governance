@@ -1,136 +1,273 @@
 // ============================================
-// พิมพ์หนังสือทวงหนี้ (2 หน้า) — เทศบาลเมืองบ้านเป็ด
+// พิมพ์หนังสือทวงหนี้ (2 หน้า) — รูปแบบหนังสือราชการภายนอก
+// Font: TH Sarabun New (Sarabun) ขนาด 12pt มาตรฐานราชการ
+// กระดาษ: A4 (210mm x 297mm)
 // ============================================
 var DEBT_LETTER_CONFIG = {
-    orgName: 'เทศบาลเมืองบ้านเป็ด',
-    orgAddr: '555 ม.2 ถ.เลี่ยงเมือง ต.บ้านเป็ด อ.เมือง จ.ขอนแก่น',
-    orgTel: 'โทร. 043-423869-70 ต่อ 482',
+    orgName: 'องค์การบริหารส่วนตำบลเหมืองหม้อ',
+    orgAddr: 'ต.เหมืองหม้อ อ.เมืองแพร่ จ.แพร่',
+    bylawYear: '2565',
+    bylawDays: '15',
     signerName: 'นางสาวปิยวรรณ จิตตะมัย',
-    signerTitle: 'นายกเทศมนตรีเมืองบ้านเป็ด',
-    tambon: 'ตำบลบ้านเป็ด',
+    signerTitle: 'นายกองค์การบริหารส่วนตำบลเหมืองหม้อ',
+    tambon: 'ตำบลเหมืองหม้อ',
     amphoe: 'อำเภอเมือง',
     province: 'จังหวัดขอนแก่น',
     postCode: '40000',
     postOfficeName: 'ไปรษณีย์ขอนแก่น 40000',
     garudaUrl: (function(){ var b = window.location.href; return b.substring(0, b.lastIndexOf('/')+1) + 'assets/img/garuda.png'; })(),
-    bylawName: 'เทศบัญญัติเทศบาลเมืองบ้านเป็ด'
+    bylawName: 'ข้อบัญญัติองค์การบริหารส่วนตำบลเหมืองหม้อ',
+    orgTel: ''
 };
 
 function buildDebtLetterCSS() {
     return [
-        "@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');",
+        "@import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');",
+        "@page { size: A4; margin: 0; }",
         "* { margin:0; padding:0; box-sizing:border-box; }",
-        "body { font-family:'Sarabun','TH Sarabun New',sans-serif; font-size:16px; color:#1a1a1a; line-height:1.8; }",
-        ".page { width:210mm; min-height:297mm; padding:25mm 25mm 20mm 30mm; position:relative; page-break-after:always; }",
-        ".header-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }",
-        ".doc-no { font-size:15px; }",
-        ".org-info { text-align:right; font-size:15px; line-height:1.6; }",
-        ".garuda { text-align:center; margin:15px 0 8px; }",
-        ".garuda img { height:80px; }",
-        ".date-line { text-align:right; margin-bottom:18px; font-size:15px; }",
-        ".subject { margin-bottom:4px; font-size:15px; }",
-        ".subject b { font-weight:600; }",
-        ".to-line { margin-bottom:18px; font-size:15px; }",
-        ".body-text { text-indent:60px; text-align:justify; font-size:15px; margin-bottom:12px; }",
-        ".closing { text-align:center; margin-top:30px; }",
-        ".closing .regards { margin-bottom:50px; font-size:15px; }",
-        ".closing .sign-title { font-size:14px; color:#333; }",
-        ".footer-section { position:absolute; bottom:20mm; left:30mm; right:25mm; border-top:1px solid #ccc; padding-top:10px; }",
-        ".footer-section .dept { font-size:13px; font-weight:600; }",
-        ".footer-section .dept-tel { font-size:13px; color:#555; }",
-        ".page2 { width:210mm; min-height:297mm; padding:30mm 25mm 20mm 30mm; position:relative; page-break-after:always; }",
-        ".envelope-header { display:flex; align-items:flex-start; gap:15px; margin-bottom:50px; }",
-        ".envelope-header img { height:55px; margin-top:5px; }",
-        ".envelope-org { font-size:14px; line-height:1.6; }",
-        ".envelope-org .name { font-weight:600; font-size:15px; }",
-        ".stamp-box { position:absolute; top:30mm; right:25mm; width:55mm; border:2px solid #333; padding:10px 12px; text-align:center; font-size:13px; line-height:1.5; }",
-        ".stamp-box .stamp-title { font-weight:600; font-size:14px; }",
-        ".stamp-box .stamp-no { font-size:13px; margin-top:2px; }",
-        ".stamp-box .stamp-post { font-size:12px; color:#555; margin-top:2px; }",
-        ".send-to { margin-top:60px; margin-left:50px; font-size:15px; line-height:1.9; }",
-        ".send-to .label { font-weight:600; margin-bottom:10px; }",
-        ".send-to .addr { margin-left:30px; }",
-        "@media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } .page,.page2 { margin:0; padding:25mm 25mm 20mm 30mm; } }"
+        "body { font-family: 'Sarabun', 'TH Sarabun New', 'TH SarabunPSK', sans-serif; font-size: 12pt; color: #000; line-height: 1.15; background: #eee; }",
+
+        // === PAGE 1: หนังสือราชการภายนอก ===
+        ".page {",
+        "  width: 210mm; height: 297mm;",
+        "  padding: 0;",
+        "  position: relative;",
+        "  page-break-after: always;",
+        "  background: #fff;",
+        "  margin: 10px auto;",
+        "  box-shadow: 0 2px 8px rgba(0,0,0,0.15);",
+        "  overflow: hidden;",
+        "}",
+        ".garuda { position: absolute; top: 15mm; left: 50%; transform: translateX(-50%); }",
+        ".garuda img { height: 35mm; }",
+        ".content-wrapper { padding: 45mm 25mm 20mm 30mm; }",
+        ".header-row { position: relative; margin-bottom: 8mm; min-height: 15mm; }",
+        ".doc-no { position: absolute; left: 0; top: 0; font-size: 12pt; }",
+        ".org-info { position: absolute; left: 55%; top: 0; right: 0; font-size: 12pt; line-height: 1.3; text-align: left; }",
+        ".date-line { margin-left: 50%; font-size: 12pt; margin-bottom: 5mm; }",
+        ".subject { font-size: 12pt; margin-bottom: 3mm; }",
+        ".to-line { font-size: 12pt; margin-bottom: 5mm; }",
+        ".body-text { text-indent: 25mm; text-align: justify; font-size: 12pt; line-height: 1.3; margin-bottom: 3mm; }",
+        ".closing-block { margin-top: 5mm; margin-left: 50%; width: 60mm; text-align: center; }",
+        ".closing-block .regards { font-size: 12pt; margin-bottom: 12mm; text-align: center; }",
+        ".closing-block .sign-area { text-align: center; }",
+        ".closing-block .sign-area .signer-name { font-size: 12pt; }",
+        ".closing-block .sign-area .signer-title { font-size: 12pt; }",
+        ".qr-section { position: absolute; bottom: 40mm; left: 30mm; display: flex; align-items: center; gap: 8mm; }",
+        ".qr-code-img { width: 28mm; height: 28mm; border: 1px solid #ddd; }",
+        ".qr-text { font-size: 11pt; display: flex; align-items: center; gap: 5px; color: #444; }",
+        ".qr-text-icon { background: #8eb0c6; color: #fff; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 10pt; }",
+        ".footer-section { position: absolute; bottom: 20mm; left: 30mm; font-size: 12pt; line-height: 1.3; }",
+        ".footer-section .dept { font-weight: 400; }",
+        ".footer-section .dept-tel { }",
+
+        // === PAGE 2: ซองจดหมาย ===
+        ".page2 {",
+        "  width: 210mm; height: 297mm;",
+        "  padding: 0;",
+        "  position: relative;",
+        "  page-break-after: always;",
+        "  background: #fff;",
+        "  margin: 10px auto;",
+        "  box-shadow: 0 2px 8px rgba(0,0,0,0.15);",
+        "  overflow: hidden;",
+        "}",
+        ".envelope-header { position: absolute; top: 25mm; left: 25mm; display: flex; align-items: flex-start; gap: 6mm; max-width: 100mm; }",
+        ".envelope-header img { height: 25mm; flex-shrink: 0; }",
+        ".envelope-org { font-size: 12pt; line-height: 1.4; margin-top: 3mm; word-wrap: break-word; }",
+        ".stamp-box { position: absolute; top: 25mm; right: 25mm; width: 50mm; border: 1pt solid #000; padding: 3mm; text-align: center; line-height: 1.4; }",
+        ".stamp-box .stamp-title { font-size: 11pt; }",
+        ".stamp-box .stamp-no { font-size: 11pt; }",
+        ".stamp-box .stamp-post { font-size: 11pt; }",
+        ".send-to { position: absolute; top: 80mm; left: 75mm; font-size: 12pt; line-height: 1.5; }",
+        ".send-to .label { font-size: 12pt; margin-bottom: 2mm; }",
+        ".send-to .addr { margin-left: 10mm; }",
+
+        // === PRINT ===
+        "@media print {",
+        "  body { background: #fff; }",
+        "  .page, .page2 { margin: 0; box-shadow: none; }",
+        "}"
     ].join('\n');
 }
 
 function buildDebtLetterPages(d, year) {
+    var settings = JSON.parse(localStorage.getItem('waste_settings') || '{}');
     var cfg = DEBT_LETTER_CONFIG;
+    var orgName = settings.org_name || cfg.orgName;
+    var orgAddr = settings.org_address || cfg.orgAddr;
+    var orgTel = settings.org_phone || cfg.orgTel || '';
+    var signerName = settings.mayor_name || cfg.signerName;
+    var signerTitle = settings.mayor_title || cfg.signerTitle;
+    var postOfficeName = settings.env_post_office || cfg.postOfficeName;
+    var garudaUrl = cfg.garudaUrl;
+    var bylawName = 'เทศบัญญัติ' + orgName;
+
+    // Extract address details from orgAddr
+    var parsedTambon = cfg.tambon;
+    var parsedAmphoe = cfg.amphoe;
+    var parsedProvince = cfg.province;
+    var parsedPostCode = cfg.postCode;
+
+    if (orgAddr) {
+        var mTambon = orgAddr.match(/ต\.\s*(.+?)(?=\s+อ\.|\s+จ\.|\s+\d|$)/);
+        if(mTambon) parsedTambon = 'ตำบล' + mTambon[1].replace(/,/, '').trim();
+        
+        var mAmphoe = orgAddr.match(/อ\.\s*(.+?)(?=\s+จ\.|\s+\d|$)/);
+        if(mAmphoe) parsedAmphoe = 'อำเภอ' + mAmphoe[1].replace(/,/, '').trim();
+        
+        var mProvince = orgAddr.match(/จ\.\s*(.+?)(?=\s+\d|$)/);
+        if(mProvince) parsedProvince = 'จังหวัด' + mProvince[1].replace(/,/, '').trim();
+
+        var mPostCode = orgAddr.match(/(\d{5})/);
+        if(mPostCode) parsedPostCode = mPostCode[1];
+    }
+
     var now = new Date();
     var thaiMonthNames = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
     var thaiDate = now.getDate() + ' ' + thaiMonthNames[now.getMonth()] + ' ' + (now.getFullYear() + 543);
     var docYear = String(now.getFullYear() + 543);
-    var docNo = 'ทม.บป.' + String(Math.floor(Math.random()*9000)+1000) + '/' + docYear.substring(2);
+    var docNo = settings.doc_invoice_no || ('ทม.บป.' + String(Math.floor(Math.random()*9000)+1000) + '/' + docYear.substring(2));
     var unpaidList = d.unpaid_months.join(', ');
     var feeText = formatMoney(d.fee);
     var totalText = formatMoney(d.total_debt);
     var monthCount = d.unpaid_count;
-    var stampNo = String(Math.floor(Math.random()*900)+100) + '/' + docYear.substring(2) + String(parseInt(docYear.substring(2))+1);
+    var stampNo = settings.env_license_no || (String(Math.floor(Math.random()*900)+100) + '/' + docYear.substring(2) + String(parseInt(docYear.substring(2))+1));
 
-    // Page 1
-    var page1 = '<div class="page">' +
-        '<div class="garuda"><img src="' + cfg.garudaUrl + '" alt="ครุฑ"></div>' +
+    // ลายเซ็น
+    var signatureHTML = '';
+    if (settings.mayor_signature) {
+        signatureHTML = '<img src="' + settings.mayor_signature + '" style="height:15mm; display:block; margin:0 auto 2mm;">';
+    } else {
+        signatureHTML = '<div style="height:15mm;"></div>';
+    }
+
+        var qrCodeHTML = '';
+        if (settings.qr_code) {
+            qrCodeHTML = '<img src="' + settings.qr_code + '" class="qr-code-img" alt="QR Code">';
+        } else {
+            qrCodeHTML = '<div class="qr-code-img" style="display:flex;align-items:center;justify-content:center;font-size:8pt;color:#999;text-align:center;">ยังไม่ได้ตั้งค่า<br>QR Code</div>';
+        }
+
+        var bankAccountInfo = '';
+        if (settings.bank_account || settings.bank_name || settings.bank_branch) {
+            var acc = settings.bank_account ? settings.bank_account : '-';
+            var bank = settings.bank_name ? settings.bank_name : '-';
+            var branch = settings.bank_branch ? settings.bank_branch : '-';
+            bankAccountInfo = '<div style="margin-top: 5px; font-size: 11pt;">' +
+                'หรือโอนเข้าบัญชีเลขที่ <b>' + acc + '</b> ธนาคาร<b>' + bank + '</b> สาขา<b>' + branch + '</b>' +
+                '</div>';
+        }
+
+    // ============ PAGE 1: หนังสือราชการภายนอก ============
+    var page1 =
+        '<div class="page">' +
+
+        // ครุฑ (กลางหน้าบน)
+        '<div class="garuda"><img src="' + garudaUrl + '" alt="ครุฑ"></div>' +
+
+        '<div class="content-wrapper">' +
+
+        // ที่ + ส่วนราชการ
         '<div class="header-row">' +
             '<div class="doc-no">ที่ ' + docNo + '</div>' +
-            '<div class="org-info">' + cfg.orgName + '<br>' + cfg.orgAddr + '</div>' +
+            '<div class="org-info">' + orgName + '<br>' + orgAddr + '</div>' +
         '</div>' +
+
+        // วันที่
         '<div class="date-line">วันที่ ' + thaiDate + '</div>' +
-        '<div class="subject"><b>เรื่อง</b>&nbsp;&nbsp;แจ้งเตือนให้ชำระค่าธรรมเนียมขยะมูลฝอยประจำปีงบประมาณ ' + year + ' ครั้งที่ ๑</div>' +
-        '<div class="to-line"><b>เรียน</b>&nbsp;&nbsp;' + d.name + ' บ้านเลขที่ ' + d.house_no + ' หมู่ที่ ' + d.moo + '</div>' +
+
+        // เรื่อง
+        '<div class="subject">เรื่อง แจ้งเตือนให้ชำระค่าธรรมเนียมขยะมูลฝอยประจำปีงบประมาณ ' + year + ' ครั้งที่ ๑</div>' +
+
+        // เรียน
+        '<div class="to-line">เรียน ' + d.name + ' บ้านเลขที่ ' + d.house_no + ' หมู่ที่ ' + d.moo + '</div>' +
+
+        // วรรคแรก
         '<div class="body-text">' +
-            'ตามที่ ' + cfg.orgName + ' ได้ออก' + cfg.bylawName + ' ' +
-            'เรื่องการจัดการสิ่งปฏิกูลและขยะมูลฝอย พ.ศ.๒๕๖๔ โดยประกาศ ณ วันที่ ๒๕ พฤษภาคม ๒๕๖๕ ' +
+            'ตามที่ ' + orgName + ' ได้ออก' + bylawName + 'ว่าด้วยการจัดการสิ่งปฏิกูลและขยะมูลฝอย พ.ศ.๒๕๖๔ โดยประกาศ ณ วันที่ ๒๕ พฤษภาคม ๒๕๖๕ ' +
             'เพื่อให้เป็นไปตามพระราชบัญญัติการสาธารณสุข พ.ศ.๒๕๓๕ ให้อำนาจองค์กรปกครองส่วนท้องถิ่นกำหนด' +
-            'ค่าธรรมเนียมให้เป็นไปตามความเหมาะสมกับแหล่งกำเนิดขยะมูลฝอย และไม่เกินกว่าที่กฎหมายกำหนดไว้ นั้น' +
+            'อัตราธรรมเนียมให้เป็นไปตามความเหมาะสมกับแหล่งกำเนิดขยะมูลฝอย และไม่เกินกว่าที่กฎหมายกำหนดไว้ นั้น' +
         '</div>' +
+
+        // วรรคสอง
         '<div class="body-text">' +
-            cfg.orgName + ' จึงขอแจ้งมายังท่านให้ดำเนินการชำระค่าธรรมเนียมการให้' +
-            'บริการเก็บขนและกำจัดสิ่งปฏิกูลหรือมูลฝอยเฉพาะเดือนที่ค้างชำระ ได้แก่ <b>' + unpaidList + '</b> ' +
-            'รวมจำนวน <b>' + monthCount + ' เดือน</b> อัตราค่าธรรมเนียมเดือนละ <b>' + feeText + ' บาท</b> ' +
-            'รวมเป็นเงินทั้งสิ้น <b>' + totalText + ' บาท</b> ชำระได้ที่' +
-            'งานจัดเก็บรายได้ กองคลัง ' + cfg.orgName + ' หรือตรวจสอบยอดและชำระผ่านช่องทาง QR CODE ด้านล่างนี้' +
+            orgName + ' จึงขอแจ้งมายังท่านให้ดำเนินการชำระค่าธรรมเนียมการให้' +
+            'บริการเก็บขนและกำจัดสิ่งปฏิกูลหรือมูลฝอย ตั้งแต่เดือน <b>' + unpaidList + '</b> ' +
+            'จำนวน <b>' + monthCount + ' เดือน</b> เป็นจำนวนเงิน <b>' + totalText + ' บาท</b> ' +
+            'อัตราค่าธรรมเนียมต่อเดือน <b>' + feeText + ' บาท</b> ชำระได้ที่' +
+            'งานจัดเก็บรายได้ กองคลัง ' + orgName + ' หรือตรวจสอบยอดและชำระผ่านช่องทาง QR CODE ด้านล่างนี้' +
         '</div>' +
+
+        // วรรคสาม
         '<div class="body-text">' +
             'จึงเรียนมาเพื่อโปรดทราบและขอความร่วมมือจากท่าน ไปชำระค่าธรรมเนียมดังกล่าวตามกำหนดเวลา' +
         '</div>' +
-        '<div class="closing">' +
+
+        // คำลงท้าย
+        '<div class="closing-block">' +
             '<div class="regards">ขอแสดงความนับถือ</div>' +
-            '<div class="sign-line">' +
-                '<div style="margin-bottom:5px;">(' + cfg.signerName + ')</div>' +
-                '<div class="sign-title">' + cfg.signerTitle + '</div>' +
+            '<div class="sign-area">' +
+                signatureHTML +
+                '<div class="signer-name">(' + signerName + ')</div>' +
+                '<div class="signer-title">' + signerTitle + '</div>' +
             '</div>' +
         '</div>' +
+
+        '</div>' + // end content-wrapper
+
+        // QR Code Section
+        '<div class="qr-section">' +
+            qrCodeHTML +
+            '<div>' +
+                '<div class="qr-text" style="margin-bottom: 2px;">' +
+                    '<span class="qr-text-icon">&larr;</span> สแกน QR CODE เพื่อตรวจสอบยอด / ชำระเงิน' +
+                '</div>' +
+                bankAccountInfo +
+            '</div>' +
+        '</div>' +
+
+        // ส่วนท้าย
         '<div class="footer-section">' +
             '<div class="dept">งานจัดเก็บรายได้ กองคลัง</div>' +
-            '<div class="dept-tel">' + cfg.orgTel + '</div>' +
+            '<div class="dept-tel">' + orgTel + '</div>' +
         '</div>' +
-    '</div>';
 
-    // Page 2
-    var page2 = '<div class="page2">' +
+        '</div>'; // end page
+
+    // ============ PAGE 2: หน้าซองจดหมาย ============
+    var page2 =
+        '<div class="page2">' +
+
+        // ส่วนหัวซอง — ครุฑ + ข้อมูลหน่วยงาน (บนซ้าย)
+        '<div class="envelope-header">' +
+            '<img src="' + garudaUrl + '" alt="ครุฑ">' +
+            '<div class="envelope-org">' +
+                '<div>' + orgName + '</div>' +
+                '<div>' + orgAddr + '</div>' +
+                (orgTel ? '<div>' + orgTel + '</div>' : '') +
+            '</div>' +
+        '</div>' +
+
+        // กล่องแสตมป์ (บนขวา)
         '<div class="stamp-box">' +
             '<div class="stamp-title">ชำระค่าฝากส่งเป็นรายเดือน</div>' +
             '<div class="stamp-no">ใบอนุญาตเลขที่<br>' + stampNo + '</div>' +
-            '<div class="stamp-post">' + cfg.postOfficeName + '</div>' +
+            '<div class="stamp-post">' + postOfficeName + '</div>' +
         '</div>' +
-        '<div class="envelope-header">' +
-            '<img src="' + cfg.garudaUrl + '" alt="ครุฑ">' +
-            '<div class="envelope-org">' +
-                '<div class="name">' + cfg.orgName + '</div>' +
-                '<div>' + cfg.orgAddr + '</div>' +
-                '<div>' + cfg.orgTel + '</div>' +
-            '</div>' +
-        '</div>' +
+
+        // ที่อยู่ผู้รับ (ตรงกลางค่อนไปทางขวา)
         '<div class="send-to">' +
             '<div class="label">กรุณาส่ง</div>' +
             '<div class="addr">' +
                 'เรียน ' + d.name + '<br>' +
                 'ที่อยู่ ' + d.house_no + ' หมู่ที่ ' + d.moo + '<br>' +
-                cfg.tambon + ' ' + cfg.amphoe + '<br>' +
-                cfg.province + ' รหัสไปรษณีย์ ' + cfg.postCode +
+                parsedTambon + ' ' + parsedAmphoe + '<br>' +
+                parsedProvince + ' รหัสไปรษณีย์ ' + parsedPostCode +
             '</div>' +
         '</div>' +
-    '</div>';
+
+        '</div>'; // end page2
 
     return page1 + page2;
 }
@@ -138,7 +275,7 @@ function buildDebtLetterPages(d, year) {
 // พิมพ์ทวงหนี้รายบุคคล
 function printDebtLetter(customerId) {
     var year = (typeof debtorSelectedYear !== 'undefined' && debtorSelectedYear) ? debtorSelectedYear : getCurrentFiscalYear();
-    var debtors = calculateDebtors(year);
+    var debtors = window.currentFilteredDebtors || calculateDebtors(year);
     var d = debtors.find(function(x){ return x.id === customerId; });
     if (!d) { showToast('ไม่พบข้อมูลลูกหนี้','error'); return; }
 
@@ -155,7 +292,7 @@ function printDebtLetter(customerId) {
 // พิมพ์ทวงหนี้ทั้งหมด
 function printAllDebtLetters() {
     var year = (typeof debtorSelectedYear !== 'undefined' && debtorSelectedYear) ? debtorSelectedYear : getCurrentFiscalYear();
-    var debtors = calculateDebtors(year);
+    var debtors = window.currentFilteredDebtors || calculateDebtors(year);
 
     if (debtors.length === 0) {
         showToast('ไม่มีลูกหนี้ค้างชำระในปีนี้','warning');

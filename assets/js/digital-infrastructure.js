@@ -5,43 +5,15 @@
 
 const DigitalInfraService = {
     // === MOCK DATA STORE ===
-    mockRoads: [
-        { id: '1', road_id: 'ถ.ทถ. 1-0001', road_cl: 'ทางหลวงท้องถิ่นชั้น 3', road_name: 'ถนนบูรพาพัฒนา', road_type: 'ถนนขึ้นทะเบียนทางหลวง', surface_type: 'คอนกรีตเสริมเหล็ก', width: 6, length_m: 1250, village_no: '2', status: 'good', construction_year: 2562, budget_source: 'งบอุดหนุนเฉพาะกิจ', latitude: 17.978, longitude: 103.475, geom: { type: 'LineString', coordinates: [[103.475, 17.978], [103.477, 17.979], [103.479, 17.977]] } },
-        { id: '2', road_id: 'ถ.ทถ. 1-0002', road_cl: 'ทางหลวงท้องถิ่นชั้น 4', road_name: 'ซอยสุขใจ 4', road_type: 'ถนนภายในตำบล', surface_type: 'แอสฟัลต์ติก/ลาดยาง', width: 4, length_m: 450, village_no: '3', status: 'fair', construction_year: 2565, budget_source: 'เทศบัญญัติงบประมาณ', latitude: 17.973, longitude: 103.468, geom: { type: 'LineString', coordinates: [[103.468, 17.973], [103.469, 17.971], [103.471, 17.972]] } },
-        { id: '3', road_id: 'ถ.ทถ. 1-0003', road_cl: 'ทางหลวงท้องถิ่นชั้น 4', road_name: 'ถนนนาดี-โคกเจริญ', road_type: 'ถนนในแผนพัฒนา', surface_type: 'หินคลุก/ลูกรัง', width: 5, length_m: 2300, village_no: '5', status: 'poor', construction_year: 2560, budget_source: 'งบพัฒนาจังหวัด', latitude: 17.985, longitude: 103.480, geom: { type: 'LineString', coordinates: [[103.480, 17.985], [103.482, 17.983], [103.484, 17.984]] } }
-    ],
-    mockWater: [
-        { id: '1', water_code: 'WR-001', water_name: 'หนองใหญ่พัฒนา', water_type: 'หนอง', surface_area_sqm: 12800, depth_m: 4, capacity_cum: 51200, village_no: '2', status: 'normal', latitude: 17.980, longitude: 103.471 },
-        { id: '2', water_code: 'WR-002', water_name: 'สระน้ำหลังโรงเรียน', water_type: 'สระ', surface_area_sqm: 3200, depth_m: 3, capacity_cum: 9600, village_no: '4', status: 'shallow', latitude: 17.971, longitude: 103.479 }
-    ],
-    mockWaterways: [
-        { id: '1', waterway_code: 'WW-01', waterway_name: 'คลองส่งน้ำชลประทาน 1', waterway_type: 'คลองส่งน้ำ', width_m: 3, depth_m: 1.5, length_m: 1800, village_no: '3', status: 'normal', latitude: 17.975, longitude: 103.473 }
-    ],
-    mockDrainage: [
-        { id: '1', asset_id: 'DN-001', drainage_type: 'ฝาท่อระบายน้ำ', material: 'เหล็กหล่อ', width_m: 0.8, depth_m: 1.2, length_m: 0.8, road_id: 'ถ.ทถ. 1-0001', village_no: '2', status: 'good', latitude: 17.9782, longitude: 103.4751 },
-        { id: '2', asset_id: 'DN-002', drainage_type: 'รางระบายน้ำ', material: 'คอนกรีต', width_m: 0.5, depth_m: 0.8, length_m: 120, road_id: 'ถ.ทถ. 1-0002', village_no: '3', status: 'clogged', latitude: 17.9731, longitude: 103.4682 }
-    ],
-    mockPublicLand: [
-        { id: '1', land_code: 'PL-01', land_name: 'สวนสุขภาพเฉลิมพระเกียรติ', land_type: 'พื้นที่สีเขียว/สวนสาธารณะ', area_rai: 8, area_ngan: 2, area_sqwa: 40, village_no: '2', status: 'used', current_use: 'นันทนาการและสวนสุขภาพชุมชน', latitude: 17.976, longitude: 103.470 }
-    ],
-    mockBoundaryMarkers: [
-        { id: '1', marker_code: 'BM-01', marker_type: 'หลักเขตตำบล', description: 'หลักปูนกลมสลักอักษรจังหวัด ตั้งอยู่กึ่งกลางสะพานข้ามห้วย', village_no: '1', latitude: 17.992, longitude: 103.485, marker_condition: 'perfect', image_url: '', document_url: '' }
-    ],
-    mockRepairs: [
-        { id: '1', repair_code: 'INF-REP-0001/2569', asset_type: 'ถนน', asset_id: 'ถ.ทถ. 1-0003', damage_detail: 'ผิวจราจรลูกรังเป็นหลุมเป็นบ่อ ลึก 15 ซม. เป็นระยะทาง 50 เมตร', reporter_name: 'นายกานต์ โคกนาดี', reporter_phone: '081-2345678', status: 'pending', budget: 120000, contractor: 'หจก. ทางดีวิศวกรรม', materials_used: [], repair_date: '', staff_name: 'สมคิด การช่าง', latitude: 17.985, longitude: 103.480, created_at: '2026-05-20T10:00:00Z' },
-        { id: '2', repair_code: 'INF-REP-0002/2569', asset_type: 'รางระบายน้ำ', asset_id: 'DN-002', damage_detail: 'ตะกอนทรายหนาและวัชพืชอุดตัน ทำให้น้ำไหลช้า น้ำล้นท่วมผิวทางช่วงฝนตกหนัก', reporter_name: 'นางสมศรี สุขใจ', reporter_phone: '089-8765432', status: 'completed', budget: 15000, contractor: 'ดำเนินการเองโดยงานช่าง', materials_used: [], repair_date: '2026-05-22', staff_name: 'วิชัย พาสุข', latitude: 17.9731, longitude: 103.4682, created_at: '2026-05-18T09:30:00Z', image_url_before: 'https://ui-avatars.com/api/?name=Before&background=dc2626&color=fff', image_url_after: 'https://ui-avatars.com/api/?name=After&background=16a34a&color=fff' }
-    ],
-    mockPermits: [
-        { id: '1', permit_code: 'EP-INF-0001/2569', permit_type: 'Building Permit', applicant_name: 'นายสุรชัย เมตตา', applicant_phone: '085-5554433', building_type: 'อาคารพาณิชย์ คสล. 3 ชั้น', address: '124 หมู่ 2 ถนนบูรพาพัฒนา', parcel_id: 'NS3G-1024', latitude: 17.9785, longitude: 103.4752, status: 'approved', document_url: '#', inspection_notes: 'ตรวจสอบโครงสร้างเหล็กและการระยะถอยร่นเป็นไปตามกฎหมายควบคุมอาคาร', created_at: '2026-05-10T08:30:00Z' }
-    ],
-    mockProposals: [
-        { id: '1', proposal_code: 'PROP-2569-001', project_name: 'โครงการก่อสร้างระบบระบายน้ำ คสล. ซอยสุขใจ 4 หมู่ 3', budget_amount: 1500000, boq_detail: [
-            { item: 'งานขุดและปรับระดับดิน', qty: 450, unit: 'ลบ.ม.', price: 120, total: 54000 },
-            { item: 'รางระบายน้ำคอนกรีตสำเร็จรูป รูปตัว U ขนาด 0.5 เมตร', qty: 900, unit: 'เมตร', price: 1200, total: 1080000 },
-            { item: 'งานฝาปิด คสล. และบ่อพักระบายน้ำ ทุก 10 เมตร', qty: 90, unit: 'ชุด', price: 2500, total: 225000 },
-            { item: 'งานปรับสภาพผิวทางแอสฟัลต์คืนรูปเดิม', qty: 300, unit: 'ตร.ม.', price: 350, total: 105000 }
-        ], cost_estimate: 1464000, project_justification: 'ป้องกันปัญหาน้ำท่วมขังพื้นที่เกษตรและบ้านเรือนราษฎรกว่า 80 ครัวเรือนในซอยสุขใจ 4 ช่วงฤดูฝน', location_map_url: '', photo_urls: [], supporting_documents: [], status: 'finalized', created_at: '2026-05-21T04:15:00Z' }
-    ],
+    mockRoads: [],
+    mockWater: [],
+    mockWaterways: [],
+    mockDrainage: [],
+    mockPublicLand: [],
+    mockBoundaryMarkers: [],
+    mockRepairs: [],
+    mockPermits: [],
+    mockProposals: [],
 
     // === LAYER COLORS ===
     LAYER_STYLES: {

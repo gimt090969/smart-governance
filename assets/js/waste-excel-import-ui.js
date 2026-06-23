@@ -357,3 +357,71 @@ function downloadErrorReport() {
     XLSX.writeFile(wb, 'error_report_' + Date.now() + '.xlsx');
     showToast('ดาวน์โหลด Error Report สำเร็จ','success');
 }
+
+async function exportImportTemplate() {
+    Swal.fire({title:'กำลังสร้างไฟล์...', allowOutsideClick:false, didOpen:()=>Swal.showLoading()});
+    
+    // Ensure we have the latest customers
+    let customers = getWasteCustomers();
+    if (!customers || customers.length === 0) {
+        customers = await fetchWasteCustomers();
+    }
+    
+    // Sort customers by moo, then house_no
+    customers.sort((a, b) => {
+        const mooA = Number(a.moo) || 0;
+        const mooB = Number(b.moo) || 0;
+        if (mooA !== mooB) return mooA - mooB;
+        return (a.house_no || '').localeCompare(b.house_no || '');
+    });
+    
+    // Prepare data
+    // Columns: รหัสลูกค้า, บ้านเลขที่, หมู่, ชื่อ-สกุล, ประเภท, ต.ค., พ.ย., ธ.ค., ม.ค., ก.พ., มี.ค., เม.ย., พ.ค., มิ.ย., ก.ค., ส.ค., ก.ย.
+    const data = customers.map(c => {
+        return {
+            'รหัสลูกค้า': c.id,
+            'บ้านเลขที่': c.house_no,
+            'หมู่': c.moo,
+            'ชื่อ-สกุล': c.name,
+            'ประเภท': c.type || '-',
+            'ต.ค.': '',
+            'พ.ย.': '',
+            'ธ.ค.': '',
+            'ม.ค.': '',
+            'ก.พ.': '',
+            'มี.ค.': '',
+            'เม.ย.': '',
+            'พ.ค.': '',
+            'มิ.ย.': '',
+            'ก.ค.': '',
+            'ส.ค.': '',
+            'ก.ย.': ''
+        };
+    });
+    
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(data);
+    
+    // Auto-size columns slightly
+    const wscols = [
+        {wch: 12}, // รหัสลูกค้า
+        {wch: 10}, // บ้านเลขที่
+        {wch: 8},  // หมู่
+        {wch: 25}, // ชื่อ-สกุล
+        {wch: 15}, // ประเภท
+        {wch: 8}, {wch: 8}, {wch: 8}, {wch: 8}, {wch: 8}, {wch: 8}, 
+        {wch: 8}, {wch: 8}, {wch: 8}, {wch: 8}, {wch: 8}, {wch: 8}
+    ];
+    ws['!cols'] = wscols;
+    
+    // Create workbook and append sheet
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "แบบฟอร์มนำเข้าชำระเงิน");
+    
+    // Save file
+    const year = document.getElementById('cfgYear') ? document.getElementById('cfgYear').value : new Date().getFullYear() + 543;
+    XLSX.writeFile(wb, `แบบฟอร์มนำเข้าชำระเงิน_ปี${year}.xlsx`);
+    
+    Swal.close();
+    showToast('ดาวน์โหลดแบบฟอร์มสำเร็จ', 'success');
+}

@@ -691,8 +691,22 @@ const ShapefileUploader = {
                     status = 'good';
                 }
 
+                let baseRoadId = props[mapping.road_id] || `ถ.ทถ. 1-${String(index + 1).padStart(4, '0')}`;
+                baseRoadId = String(baseRoadId).trim();
+                
+                // ถ้ารหัสถนนซ้ำ (เช่น ถนนเส้นเดียวกันแต่แบ่งเป็นหลายท่อนในไฟล์แผนที่)
+                // ให้เติม _ตอนที่2, _ตอนที่3 ต่อท้ายเพื่อให้บันทึกลงฐานข้อมูลได้ครบทุกเส้นโดยไม่โดนเขียนทับ (Upsert)
+                let finalRoadId = baseRoadId;
+                if (!window._roadIdCounter) window._roadIdCounter = {};
+                if (window._roadIdCounter[baseRoadId]) {
+                    window._roadIdCounter[baseRoadId]++;
+                    finalRoadId = `${baseRoadId}_ตอนที่${window._roadIdCounter[baseRoadId]}`;
+                } else {
+                    window._roadIdCounter[baseRoadId] = 1;
+                }
+
                 const importedRow = {
-                    road_id: props[mapping.road_id] || `ถ.ทถ. 1-${String(index + 1).padStart(4, '0')}`,
+                    road_id: finalRoadId,
                     road_cl: props[mapping.road_cl] || 'ทางหลวงท้องถิ่นชั้น 3',
                     road_name: props[mapping.road_name] || `ถนนจากไฟล์นำเข้าชุดที่ ${index + 1}`,
                     road_type: roadType,

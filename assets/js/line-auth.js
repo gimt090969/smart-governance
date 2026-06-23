@@ -23,7 +23,8 @@ const LineAuth = (() => {
     // Replace these with your real LINE Login Channel credentials
     // =======================================
     const CONFIG = {
-        CHANNEL_ID: '2009933819',                    // ← Replace with your LINE Login Channel ID
+        CHANNEL_ID: '2010346499',                    // ← Replace with your LINE Login Channel ID
+        CHANNEL_SECRET: 'f6507ee7ad88069a100c450e7c419265',                          // ← นำ Channel Secret ของ LINE มาวางตรงนี้ (ถ้าไม่ใช้ Edge Function)
         REDIRECT_URI: window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'index.html',
         SCOPE: 'profile openid email',
         STATE_KEY: 'sgov_line_state',
@@ -146,22 +147,74 @@ const LineAuth = (() => {
 
         // --- PRODUCTION: call Supabase Edge Function to exchange code → token → profile ---
         if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-            const { data, error } = await supabaseClient.functions.invoke('line-auth', {
-                body: { code: code, redirect_uri: CONFIG.REDIRECT_URI, client_id: CONFIG.CHANNEL_ID }
-            });
+            try {
+                const { data, error } = await supabaseClient.functions.invoke('line-auth', {
+                    body: { code: code, redirect_uri: CONFIG.REDIRECT_URI, client_id: CONFIG.CHANNEL_ID }
+                });
 
-            if (error) {
-                console.error("Edge Function Error:", error);
-                throw new Error(error.message || 'Server error');
+                if (!error && data && data.profile) {
+                    return data.profile;
+                } else {
+                    console.warn("Edge Function failed or returned no profile. Falling back to next method.", error);
+                }
+            } catch (err) {
+                console.warn("Edge Function network error. Falling back to next method.", err);
             }
-            if (data && data.profile) {
-                return data.profile;
-            }
-        } else {
-            throw new Error("Supabase client is not initialized.");
         }
 
-        throw new Error("No profile returned");
+        // --- PRODUCTION: call Vercel Serverless Function ---
+        if (CONFIG.CHANNEL_SECRET) {
+            try {
+                const res = await fetch('/api/line-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        code: code,
+                        redirect_uri: CONFIG.REDIRECT_URI,
+                        client_id: CONFIG.CHANNEL_ID,
+                        client_secret: CONFIG.CHANNEL_SECRET
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.profile) {
+                        return data.profile;
+                    }
+                } else {
+                    const errorData = await res.json().catch(() => ({}));
+                    console.warn("Vercel API failed:", res.status, errorData);
+                    if (window.location.hostname.includes('vercel.app')) {
+                        alert("เกิดข้อผิดพลาด: " + (errorData.description || errorData.details || errorData.error || `HTTP ${res.status}`));
+                        return null;
+                    }
+                }
+            } catch(e) {
+                console.warn("Vercel API network error", e);
+            }
+        }
+
+        // Fallback to mock profile if all fail (usually for local development without Vercel CLI)
+        if (window.location.hostname.includes('vercel.app')) {
+            // Do not fallback on production! 
+            alert("ไม่สามารถดึงข้อมูลจาก LINE ได้ กรุณาตรวจสอบการตั้งค่า LINE Login Channel หรือ Vercel API");
+            return null;
+        }
+
+        console.log("Using Mock Profile Fallback (Local Development)");
+        const browserId = navigator.userAgent.length.toString(36) + screen.width + screen.height;
+        let hash = 0;
+        for (let i = 0; i < browserId.length; i++) {
+            hash = ((hash << 5) - hash) + browserId.charCodeAt(i);
+            hash |= 0;
+        }
+        const mockId = 'Ufallback' + Math.abs(hash).toString(16).padStart(12, '0');
+        return {
+            userId: mockId,
+            displayName: 'LINE User (Fallback)',
+            pictureUrl: 'https://ui-avatars.com/api/?name=LINE+User&background=06C755&color=fff&size=200&bold=true',
+            email: null
+        };
     }
 
     // =======================================

@@ -33,14 +33,15 @@ const NAV_ITEMS = [
     { href: 'waste-dashboard.html', icon: 'fa-solid fa-trash-can', label: 'ค่าธรรมเนียมขยะ', key: 'waste-dashboard', depts: ['กองคลัง'], parent: 'finance' },
     { href: 'waste-customers.html', icon: 'fa-solid fa-address-book', label: 'ทะเบียนลูกค้า', key: 'waste-customers', depts: ['กองคลัง'], parent: 'waste-dashboard' },
     { href: 'waste-payments.html', icon: 'fa-solid fa-hand-holding-dollar', label: 'รับชำระเงิน', key: 'waste-payments', depts: ['กองคลัง'], parent: 'waste-dashboard' },
-    { href: 'waste-kor3.html', icon: 'fa-solid fa-table-cells', label: 'กค.3 รายเดือน', key: 'waste-kor3', depts: ['กองคลัง'], parent: 'waste-dashboard' },
-    { href: 'waste-debtors.html', icon: 'fa-solid fa-user-clock', label: 'ลูกหนี้ค้างชำระ', key: 'waste-debtors', depts: ['กองคลัง'], parent: 'waste-dashboard' },
     { href: 'waste-reports.html', icon: 'fa-solid fa-chart-bar', label: 'รายงานรายรับ', key: 'waste-reports', depts: ['กองคลัง'], parent: 'waste-dashboard' },
+    { href: 'waste-kor3.html?v=1781176854926', icon: 'fa-solid fa-table-cells', label: 'กค.3 รายเดือน', key: 'waste-kor3', depts: ['กองคลัง'], parent: 'waste-dashboard' },
+    { href: 'waste-debtors.html', icon: 'fa-solid fa-user-clock', label: 'ลูกหนี้ค้างชำระ', key: 'waste-debtors', depts: ['กองคลัง'], parent: 'waste-dashboard' },
     { href: 'waste-map.html', icon: 'fa-solid fa-map-location-dot', label: 'แผนที่ลูกค้า', key: 'waste-map', depts: ['กองคลัง'], parent: 'waste-dashboard' },
     { href: 'waste-staff.html', icon: 'fa-solid fa-users-gear', label: 'เจ้าหน้าที่รับชำระ', key: 'waste-staff', depts: ['กองคลัง'], parent: 'waste-dashboard' },
     { href: 'waste-register-request.html', icon: 'fa-solid fa-user-plus', label: 'คำขอขึ้นทะเบียน', key: 'waste-register-request', depts: ['กองคลัง'], parent: 'waste-dashboard' },
     { href: 'waste-cancel-request.html', icon: 'fa-solid fa-user-minus', label: 'คำขอยกเลิกบริการ', key: 'waste-cancel-request', depts: ['กองคลัง'], parent: 'waste-dashboard' },
     { href: 'waste-excel-import.html', icon: 'fa-solid fa-file-excel', label: 'Smart Excel Import', key: 'waste-excel-import', depts: ['กองคลัง'], parent: 'waste-dashboard' },
+    { href: 'waste-settings.html', icon: 'fa-solid fa-gear', label: 'ตั้งค่า', key: 'waste-settings', depts: ['กองคลัง'], parent: 'waste-dashboard' },
     { href: 'publicworks.html', icon: 'fa-solid fa-hard-hat', label: 'กองช่าง', key: 'publicworks', depts: ['กองช่าง'] },
     { href: 'publicworks-electric.html', icon: 'fa-solid fa-bolt', label: 'ซ่อมบำรุงไฟฟ้า', key: 'publicworks-electric', depts: ['กองช่าง'], parent: 'publicworks' },
     { href: 'publicworks-electric-registry.html', icon: 'fa-solid fa-clipboard-list', label: 'ทะเบียนเสาไฟ', key: 'publicworks-electric-registry', depts: ['กองช่าง'], parent: 'publicworks-electric' },
@@ -129,12 +130,17 @@ function buildSidebar(activeKey) {
     const activeItem = NAV_ITEMS.find(i => i.key === activeKey);
     const activeParentKey = activeItem ? activeItem.parent : null;
 
+    const localSettings = JSON.parse(localStorage.getItem('waste_settings') || '{}');
+    const orgName = localSettings.org_name || '';
+    const logoUrl = localSettings.org_logo || 'https://drive.google.com/thumbnail?id=1cPWRFVoN48eV6lJVS9E7nd2Mi7y5IQj8&sz=w200';
+
     sidebar.innerHTML = `
         <div class="sidebar-header d-flex flex-column align-items-center text-center">
-            <img src="https://drive.google.com/thumbnail?id=1cPWRFVoN48eV6lJVS9E7nd2Mi7y5IQj8&sz=w200"
+            <img id="sidebar-org-logo" src="${logoUrl}"
                  alt="GOOD GOV" style="max-height:60px; border-radius: 12px; margin-bottom: 0.75rem;">
             <h6 class="fw-bold mb-1">GOOD GOV</h6>
-            <small id="sidebar-role-label" class="opacity-75">กำลังโหลด...</small>
+            <small id="sidebar-org-name" class="fw-semibold mt-1 d-block" style="color: #60a5fa; font-size: 0.75rem; line-height: 1.2;">${orgName}</small>
+            <small id="sidebar-role-label" class="opacity-75 mt-1">กำลังโหลด...</small>
         </div>
 
         <ul class="list-unstyled components" id="nav-list">
@@ -197,6 +203,27 @@ function buildSidebar(activeKey) {
     // Set role label from session (using already declared 'user')
     const roleEl = document.getElementById('sidebar-role-label');
     if (roleEl) roleEl.textContent = user.role || 'ผู้ดูแลระบบ';
+
+    // Asynchronously load settings to update logo and org name
+    setTimeout(async () => {
+        let settings = null;
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+            try {
+                const { data } = await supabaseClient.from('waste_settings').select('org_name, org_logo').limit(1).single();
+                if (data) settings = data;
+            } catch (e) {}
+        }
+        if (!settings) {
+            const local = localStorage.getItem('waste_settings');
+            if (local) settings = JSON.parse(local);
+        }
+        if (settings) {
+            const logoEl = document.getElementById('sidebar-org-logo');
+            const nameEl = document.getElementById('sidebar-org-name');
+            if (logoEl && settings.org_logo) logoEl.src = settings.org_logo;
+            if (nameEl && settings.org_name) nameEl.textContent = settings.org_name;
+        }
+    }, 100);
 }
 
 // =============================================

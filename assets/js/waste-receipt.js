@@ -8,11 +8,8 @@ var RECEIPT_DRIVE_FOLDER = 'https://drive.google.com/drive/folders/1Gqxt-1GiC5cx
 // >>> หลัง Deploy Apps Script แล้ว ให้วาง URL ที่นี่ <<<
 var GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztSUMz-9CpiPA9aGaGeU5HjvjrRfX4PH65x6HaOjqK0fe2gSk8TwVqKK4pZTAD5Ro_5A/exec';
 
-var RECEIPT_ORG = {
-    orgName: 'เทศบาลเมืองบ้านเป็ด',
-    orgAddr: '555 ม.2 ถ.เลี่ยงเมือง ต.บ้านเป็ด อ.เมือง จ.ขอนแก่น',
-    orgTel: 'โทร. 043-423869-70 ต่อ 482'
-};
+// We will dynamically fetch these from waste_settings in buildReceiptHTML
+var RECEIPT_ORG = null;
 
 function getGarudaAbsUrl() {
     var b = window.location.href;
@@ -21,8 +18,13 @@ function getGarudaAbsUrl() {
 
 // === สร้าง HTML ใบเสร็จ ===
 function buildReceiptHTML(p) {
-    var cfg = RECEIPT_ORG;
-    var garudaUrl = getGarudaAbsUrl();
+    var settings = JSON.parse(localStorage.getItem('waste_settings') || '{}');
+    var cfg = {
+        orgName: settings.org_name || 'เทศบาลตำบล GOOD GOV',
+        orgAddr: settings.org_address || '',
+        orgTel: settings.org_phone || ''
+    };
+    var garudaUrl = settings.org_logo || getGarudaAbsUrl();
     var monthsPaid = Array.isArray(p.months_paid) ? p.months_paid.join(', ') : (p.months_paid || '-');
     var now = new Date();
     var thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
