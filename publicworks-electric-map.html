@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
@@ -145,12 +147,13 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
 const API = 'http://localhost:3000/api/electric';
-let map, markers = [], allPoles = [];
+let map, markerClusterGroup = null, allPoles = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
@@ -209,9 +212,21 @@ function applyFilter() {
 }
 
 function renderMarkers(poles) {
-    markers.forEach(m => map.removeLayer(m));
-    markers = [];
+    if (markerClusterGroup) {
+        map.removeLayer(markerClusterGroup);
+    }
+    
+    markerClusterGroup = L.markerClusterGroup({
+        chunkedLoading: true,
+        maxClusterRadius: 50,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true
+    });
+
     poles.forEach(p => {
+        if (!p.lat || !p.lng || (p.lat === 0 && p.lng === 0)) return;
+
         const color = p.status === 'broken' ? '#ef4444' : '#22c55e';
         const icon = L.divIcon({
             className: '',
@@ -219,7 +234,7 @@ function renderMarkers(poles) {
                 <i class="fa-solid fa-bolt" style="color:#fff;font-size:12px;"></i></div>`,
             iconSize: [28, 28], iconAnchor: [14, 14]
         });
-        const m = L.marker([p.lat, p.lng], { icon }).addTo(map);
+        const m = L.marker([p.lat, p.lng], { icon });
         const imgHtml = p.image_url ? `<img src="${getDriveImgUrl(p.image_url)}" style="width:100%;height:100px;object-fit:cover;border-radius:8px;margin-bottom:8px;">` : '';
         m.bindPopup(`
             <div style="min-width:200px;font-family:'Prompt',sans-serif;">
@@ -238,11 +253,13 @@ function renderMarkers(poles) {
                 </div>
             </div>
         `);
-        markers.push(m);
+        markerClusterGroup.addLayer(m);
     });
+
+    map.addLayer(markerClusterGroup);
+
     if (poles.length > 0) {
-        const group = L.featureGroup(markers);
-        map.fitBounds(group.getBounds().pad(0.2));
+        map.fitBounds(markerClusterGroup.getBounds().pad(0.2));
     }
 }
 

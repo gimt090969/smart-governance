@@ -676,6 +676,9 @@
                                     <button onclick="openEditBoundaryModal('${b.id}')" class="btn btn-xs btn-outline-warning d-inline-flex align-items-center gap-1 font-bold text-[10px] px-2 py-1 shadow-sm rounded-lg">
                                         <i class="fa-solid fa-pen-to-square"></i> แก้ไขข้อความ
                                     </button>
+                                    <button onclick="deleteBoundary('${b.id}')" class="btn btn-xs btn-outline-danger d-inline-flex align-items-center gap-1 font-bold text-[10px] px-2 py-1 shadow-sm rounded-lg" title="ลบข้อมูล">
+                                        <i class="fa-solid fa-trash"></i> ลบ
+                                    </button>
                                     <a href="digital-infrastructure-map.html?focus=boundary&id=${b.id}" class="btn btn-xs btn-indigo text-white bg-indigo-600 hover:bg-indigo-700 d-inline-flex align-items-center gap-1 font-bold text-[10px] px-2.5 py-1 shadow-sm rounded-lg transform hover:scale-[1.03] active:scale-[0.98] transition-all">
                                         <i class="fa-solid fa-map-location-dot"></i> กดดูแผนที่
                                     </a>
@@ -782,6 +785,7 @@
                                     <a href="digital-infrastructure-map.html?focus=boundary&id=${b.id}" class="btn btn-xs btn-indigo text-white bg-indigo-600 hover:bg-indigo-700 d-inline-flex align-items-center gap-1 font-bold shadow-sm rounded-lg" title="กดดูแผนที่หมู่บ้านนี้">
                                         <i class="fa-solid fa-map-location-dot text-[10px]"></i> กดดูแผนที่
                                     </a>
+                                    <button class="btn btn-xs btn-outline-danger px-2.5 py-1 text-[10px] font-bold d-inline-flex align-items-center gap-1 shadow-sm rounded-lg" onclick="deleteBoundary('${b.id}')" title="ลบข้อมูล"><i class="fa-solid fa-trash"></i> ลบ</button>
                                     <button class="btn btn-xs btn-outline-warning px-2.5 py-1 text-[10px] font-bold d-inline-flex align-items-center gap-1 shadow-sm rounded-lg" onclick="openEditBoundaryModal('${b.id}')"><i class="fa-solid fa-pen-to-square"></i> แก้ไขข้อความ</button>
                                 </div>
                             </td>
@@ -830,6 +834,19 @@
             if(typeof showToast !== 'undefined') showToast('ไม่สามารถลบข้อมูลหลักเขตได้', 'danger');
         }
     }
+
+    window.deleteBoundary = async function(id) {
+        if(!confirm('คุณต้องการลบข้อมูลแนวเขตนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถกู้คืนได้')) return;
+        
+        try {
+            await BoundarySpatialService.deleteBoundary(id);
+            if(typeof showToast !== 'undefined') showToast('ลบข้อมูลแนวเขตเรียบร้อยแล้ว', 'success');
+            loadBoundaryData();
+        } catch(e) {
+            console.error("Delete boundary error:", e);
+            if(typeof showToast !== 'undefined') showToast('ไม่สามารถลบข้อมูลแนวเขตได้', 'danger');
+        }
+    };
 
     function setupGISUploadEngine() {
         const importType = document.getElementById('importDataType').value;

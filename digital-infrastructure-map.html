@@ -116,6 +116,25 @@
             z-index: 10000 !important;
             max-height: calc(100vh - 40px) !important;
         }
+        /* Pole Labels Tooltips (Zoom-dependent) */
+        .leaflet-tooltip.pole-label-tooltip {
+            background: rgba(15, 23, 42, 0.9) !important;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 6px !important;
+            color: #f8fafc !important; 
+            font-family: 'Prompt', sans-serif !important;
+            font-size: 0.75rem !important;
+            padding: 2px 6px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;
+            white-space: nowrap;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            line-height: 1.2;
+        }
+
+        .leaflet-tooltip.pole-label-tooltip::before {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -328,7 +347,10 @@
 
     function initGISMap() {
         // อิงพิกัดกลางตำบลจากที่ตรวจจับได้
-        map = L.map('gisMasterMap');
+        map = L.map('gisMasterMap', {
+            preferCanvas: true,
+            wheelDebounceTime: 150
+        });
 
         // แผนที่ฐานดาวเทียมและถนน
         const googleStreets = L.tileLayer('http://mt0.google.com/vt/lyrs=m&hl=th&x={x}&y={y}&z={z}', {
@@ -350,6 +372,29 @@
         // สร้าง Feature Group สำหรับแต่ละเลเยอร์หลัก
         Object.keys(activeFilters).forEach(key => {
             layers[key] = L.featureGroup().addTo(map);
+        });
+
+        // Toggle pole labels on zoom dynamically to prevent DOM lag
+        map.on('zoomend moveend', function() {
+            const zoom = map.getZoom();
+            if (zoom >= 19 && layers.lighting) {
+                const bounds = map.getBounds();
+                layers.lighting.eachLayer(circle => {
+                    if (bounds.contains(circle.getLatLng())) {
+                        if (!circle.getTooltip()) {
+                            circle.bindTooltip(`<b>${circle.pole_code}</b><br><span style="font-size:0.65rem;color:#94a3b8;">${circle.light_type || '-'}</span>`, {
+                                permanent: true, direction: 'right', offset: [5, 0], className: 'pole-label-tooltip'
+                            });
+                        }
+                    } else {
+                        if (circle.getTooltip()) circle.unbindTooltip();
+                    }
+                });
+            } else if (layers.lighting) {
+                layers.lighting.eachLayer(circle => {
+                    if (circle.getTooltip()) circle.unbindTooltip();
+                });
+            }
         });
     }
 
@@ -475,19 +520,25 @@
             });
 
             // 5. เรนเดอร์ไฟฟ้าส่องสว่าง (Lighting)
-            // ดึงจาก View ดึงเสาไฟเดิมของเทศบาลมาแสดงผลร่วมกัน
-            let mockPoles = [
-                { code: 'PL-045', lat: 17.9752, lng: 103.4725, detail: 'หลอด LED 40W' },
-                { code: 'PL-112', lat: 17.9735, lng: 103.4695, detail: 'หลอดโซเดียมแรงดันสูง 250W' }
-            ];
-            mockPoles.forEach(p => {
-                const circle = L.circleMarker([p.lat, p.lng], DigitalInfraService.LAYER_STYLES.lighting);
-                circle.bindPopup(buildInfraPopupHTML('เสาไฟฟ้าส่องสว่าง', p.code, `
-                    <b>ประเภทโคม:</b> ${p.detail}<br>
-                    <b>การทำแผนที่:</b> GIS-Linked คำรับซ่อมบำรุงแบบเรียลไทม์
-                `));
-                layers.lighting.addLayer(circle);
-            });
+            // 5. เรนเดอร์ไฟฟ้าส่องสว่าง (Lighting)
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                const { data: poles, error } = await supabaseClient.from('electric_poles').select('*');
+                if (!error && poles) {
+                    poles.forEach(p => {
+                        if (!p.lat || !p.lng || (p.lat === 0 && p.lng === 0)) return;
+                        const circle = L.circleMarker([p.lat, p.lng], DigitalInfraService.LAYER_STYLES.lighting);
+                        circle.pole_code = p.pole_code;
+                        circle.light_type = p.light_type;
+                        circle.bindPopup(buildInfraPopupHTML('เสาไฟฟ้าส่องสว่าง', p.pole_code, `
+                            <b>ประเภทโคม:</b> ${p.light_type || '-'}<br>
+                            <b>ประเภทเสา:</b> ${p.pole_type || '-'}<br>
+                            <b>หมู่ที่:</b> ${p.village_no || '-'}<br>
+                            <b>สถานะ:</b> <span style="color:${p.status === 'broken' ? '#dc2626' : '#166534'}">${p.status === 'broken' ? 'ชำรุด' : 'ปกติ'}</span>
+                        `));
+                        layers.lighting.addLayer(circle);
+                    });
+                }
+            }
 
             // 6. ที่สาธารณประโยชน์ (Public Land Polygon)
             publicLand.forEach(pl => {

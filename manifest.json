@@ -1,0 +1,22 @@
+{
+  "name": "GOOD GOV Citizen",
+  "short_name": "Citizen Map",
+  "description": "แพลตฟอร์มเมืองอัจฉริยะ สำหรับบริการประชาชน (Public GIS Portal)",
+  "start_url": "/public-map.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e40af",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "assets/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

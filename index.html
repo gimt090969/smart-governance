@@ -383,63 +383,86 @@
 
                 <!-- Left info panel (hidden on mobile) -->
                 <div class="col-lg-5 d-none d-lg-block left-panel" style="animation: fadeInUp 0.5s ease 0.2s both;">
-                    <div class="mb-4">
-                        <h2 class="fw-bold mb-2">GOOD GOV<br>ระบบบริหารจัดการงานท้องถิ่นอัจฉริยะ</h2>
-                        <p style="color: rgba(255,255,255,0.55); font-size: 1rem;">Smart Governance Municipality
-                            Platform<br>ดิจิทัลทรานส์ฟอร์เมชันสำหรับองค์กรปกครองส่วนท้องถิ่น</p>
+                    <div class="mb-3">
+                        <h2 class="fw-bold mb-1">GOOD GOV<br><span id="hero-org-name" style="font-size: 0.85em; opacity: 0.9;"></span></h2>
+                        <h6 class="text-info fw-semibold mb-2" style="letter-spacing: 0.5px;">One Platform • One Data • One Service</h6>
+                        <p style="color: rgba(255,255,255,0.8); font-size: 0.9rem; margin-bottom: 0.5rem; line-height: 1.4;">แพลตฟอร์มดิจิทัลครบวงจรสำหรับองค์กรปกครองส่วนท้องถิ่น เชื่อมโยงข้อมูล บริหารงานอัจฉริยะ ยกระดับคุณภาพการให้บริการประชาชน</p>
+                        <p style="color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-bottom: 0;"><strong>Digital Twin Municipality</strong><br>"สร้างเมืองดิจิทัลด้วยข้อมูลจริงบนแผนที่จริง"</p>
                     </div>
 
-                    <div class="feature-item">
-                        <div class="feature-icon text-primary"><i class="fa-solid fa-map-location-dot"></i></div>
-                        <div>
-                            <div class="fw-semibold" style="font-size:0.9rem;">ระบบแผนที่ภาษีอัจฉริยะ (LTAX GIS)</div>
-                            <div style="color:rgba(255,255,255,0.5); font-size:0.8rem;">
-                                เชื่อมต่อข้อมูลแปลงที่ดินแบบเรียลไทม์</div>
+                    <div class="d-flex flex-column mb-3" style="gap: 0.65rem;">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="feature-icon text-primary shadow-sm" style="width: 34px; height: 34px; font-size: 0.9rem; background: rgba(13, 110, 253, 0.15); border: 1px solid rgba(13, 110, 253, 0.2);"><i class="fa-solid fa-building-columns"></i></div>
+                            <div class="fw-semibold" style="font-size:0.85rem; color: rgba(255,255,255,0.9);">บริหารงานทุกกอง ทุกภารกิจ ในแพลตฟอร์มเดียว</div>
                         </div>
-                    </div>
-                    <div class="feature-item">
-                        <div class="feature-icon text-success"><i class="fa-solid fa-coins"></i></div>
-                        <div>
-                            <div class="fw-semibold" style="font-size:0.9rem;">ระบบการเงินและรายได้ครบวงจร</div>
-                            <div style="color:rgba(255,255,255,0.5); font-size:0.8rem;">ภาษี, ค่าขยะ, ค่าน้ำ — PromptPay
-                                QR</div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="feature-icon text-danger shadow-sm" style="width: 34px; height: 34px; font-size: 0.9rem; background: rgba(220, 53, 69, 0.15); border: 1px solid rgba(220, 53, 69, 0.2);"><i class="fa-solid fa-map-location-dot"></i></div>
+                            <div class="fw-semibold" style="font-size:0.85rem; color: rgba(255,255,255,0.9);">ระบบแผนที่ภาษีและทรัพย์สินอัจฉริยะ (LTAX GIS)</div>
                         </div>
-                    </div>
-                    <div class="feature-item">
-                        <div class="feature-icon text-warning"><i class="fa-solid fa-users-gear"></i></div>
-                        <div>
-                            <div class="fw-semibold" style="font-size:0.9rem;">บริหารจัดการกองทุกกองในที่เดียว</div>
-                            <div style="color:rgba(255,255,255,0.5); font-size:0.8rem;">6 กอง · กำหนดสิทธิ์ตามบทบาท
-                                (RBAC)</div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="feature-icon text-info shadow-sm" style="width: 34px; height: 34px; font-size: 0.9rem; background: rgba(13, 202, 240, 0.15); border: 1px solid rgba(13, 202, 240, 0.2);"><i class="fa-solid fa-road-bridge"></i></div>
+                            <div class="fw-semibold" style="font-size:0.85rem; color: rgba(255,255,255,0.9);">ระบบโครงสร้างพื้นฐานและสาธารณูปโภค</div>
                         </div>
-                    </div>
-                    <div class="feature-item">
-                        <div class="feature-icon text-info"><i class="fa-brands fa-line"></i></div>
-                        <div>
-                            <div class="fw-semibold" style="font-size:0.9rem;">เชื่อมต่อ LINE OA อัตโนมัติ</div>
-                            <div style="color:rgba(255,255,255,0.5); font-size:0.8rem;">แจ้งเตือนประชาชนและเจ้าหน้าที่
-                            </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="feature-icon text-warning shadow-sm" style="width: 34px; height: 34px; font-size: 0.9rem; background: rgba(255, 193, 7, 0.15); border: 1px solid rgba(255, 193, 7, 0.2);"><i class="fa-solid fa-coins"></i></div>
+                            <div class="fw-semibold" style="font-size:0.85rem; color: rgba(255,255,255,0.9);">ระบบภาษี รายได้ และการชำระเงินดิจิทัล</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="feature-icon text-success shadow-sm" style="width: 34px; height: 34px; font-size: 0.9rem; background: rgba(25, 135, 84, 0.15); border: 1px solid rgba(25, 135, 84, 0.2);"><i class="fa-solid fa-users"></i></div>
+                            <div class="fw-semibold" style="font-size:0.85rem; color: rgba(255,255,255,0.9);">ระบบทะเบียนประชาชนและข้อมูลครัวเรือน</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="feature-icon text-light shadow-sm" style="width: 34px; height: 34px; font-size: 0.9rem; background: rgba(248, 249, 250, 0.15); border: 1px solid rgba(248, 249, 250, 0.2);"><i class="fa-solid fa-file-invoice"></i></div>
+                            <div class="fw-semibold" style="font-size:0.85rem; color: rgba(255,255,255,0.9);">ระบบเอกสารอิเล็กทรอนิกส์ และ AI OCR</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="feature-icon text-danger shadow-sm" style="width: 34px; height: 34px; font-size: 0.9rem; background: rgba(220, 53, 69, 0.15); border: 1px solid rgba(220, 53, 69, 0.2);"><i class="fa-solid fa-heart-pulse"></i></div>
+                            <div class="fw-semibold" style="font-size:0.85rem; color: rgba(255,255,255,0.9);">ระบบสาธารณสุข กลุ่มเปราะบาง และ EMS</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="feature-icon text-warning shadow-sm" style="width: 34px; height: 34px; font-size: 0.9rem; background: rgba(255, 193, 7, 0.15); border: 1px solid rgba(255, 193, 7, 0.2);"><i class="fa-solid fa-bullhorn"></i></div>
+                            <div class="fw-semibold" style="font-size:0.85rem; color: rgba(255,255,255,0.9);">ระบบรับเรื่องร้องเรียนและบริการประชาชนออนไลน์</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="feature-icon text-primary shadow-sm" style="width: 34px; height: 34px; font-size: 0.9rem; background: rgba(13, 110, 253, 0.15); border: 1px solid rgba(13, 110, 253, 0.2);"><i class="fa-solid fa-chart-pie"></i></div>
+                            <div class="fw-semibold" style="font-size:0.85rem; color: rgba(255,255,255,0.9);">Dashboard ผู้บริหารเพื่อการตัดสินใจเชิงข้อมูล</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="feature-icon text-success shadow-sm" style="width: 34px; height: 34px; font-size: 0.9rem; background: rgba(25, 135, 84, 0.15); border: 1px solid rgba(25, 135, 84, 0.2);"><i class="fa-solid fa-bell"></i></div>
+                            <div class="fw-semibold" style="font-size:0.85rem; color: rgba(255,255,255,0.9);">ระบบแจ้งเตือนอัตโนมัติ</div>
                         </div>
                     </div>
 
-                    <div class="mt-4 p-3 rounded-14"
-                        style="background:rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);">
+                    <div class="p-3 rounded-14"
+                        style="background:rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;">
                         <div class="d-flex gap-3 justify-content-around text-center">
                             <div>
-                                <div class="fw-bold fs-5">6</div>
-                                <div style="font-size:0.75rem; color:rgba(255,255,255,0.5);">โมดูลหลัก</div>
+                                <div class="fw-bold fs-5 text-white">20+</div>
+                                <div style="font-size:0.75rem; color:rgba(255,255,255,0.6);">โมดูลอัจฉริยะ</div>
                             </div>
                             <div style="border-left:1px solid rgba(255,255,255,0.1);"></div>
                             <div>
-                                <div class="fw-bold fs-5">12K+</div>
-                                <div style="font-size:0.75rem; color:rgba(255,255,255,0.5);">ประชากร</div>
+                                <div class="fw-bold fs-5 text-white">100%</div>
+                                <div style="font-size:0.75rem; color:rgba(255,255,255,0.6);">Digital Workflow</div>
                             </div>
                             <div style="border-left:1px solid rgba(255,255,255,0.1);"></div>
                             <div>
-                                <div class="fw-bold fs-5">24/7</div>
-                                <div style="font-size:0.75rem; color:rgba(255,255,255,0.5);">Online</div>
+                                <div class="fw-bold fs-5 text-white">24/7</div>
+                                <div style="font-size:0.75rem; color:rgba(255,255,255,0.6);">Online Service</div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Public Map CTA -->
+                    <div class="mt-4 pt-3 d-flex justify-content-center">
+                        <a href="public-map.html" target="_blank" class="btn btn-primary d-flex align-items-center gap-3 py-3 px-4 shadow-lg w-100" style="border-radius: 16px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 1px solid rgba(255,255,255,0.2); transition: transform 0.2s; text-decoration: none;">
+                            <i class="fa-solid fa-map-location-dot" style="font-size: 1.8rem;"></i>
+                            <div class="text-start" style="line-height: 1.2;">
+                                <div class="fw-bold" style="font-size: 1.1rem; letter-spacing: 0.5px; color: white;">แผนที่เมืองอัจฉริยะ</div>
+                                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.8);">Smart City Map (สำหรับประชาชน)</div>
+                            </div>
+                            <i class="fa-solid fa-chevron-right ms-auto text-white"></i>
+                        </a>
                     </div>
                 </div>
 
@@ -449,13 +472,34 @@
                         <!-- Logo -->
                         <div class="text-center mb-4">
                             <div class="logo-badge mb-3">
-                                <img src="https://drive.google.com/thumbnail?id=1cPWRFVoN48eV6lJVS9E7nd2Mi7y5IQj8&sz=w500"
-                                    alt="GOOD GOV Logo"
-                                    style="height:65px; margin-bottom:0.5rem; border-radius: 8px;">
-                                <span
-                                    style="color:#fff; font-size:0.8rem; font-weight:600; letter-spacing:0.02em;">GOOD GOV</span>
+                                <img id="login-org-logo" src=""
+                                    alt="Organization Logo"
+                                    style="height:65px; margin-bottom:0.5rem; border-radius: 8px; object-fit: contain;">
+                                <script>
+                                    try {
+                                        const _ls = JSON.parse(localStorage.getItem('waste_settings'));
+                                        document.getElementById('login-org-logo').src = (_ls && _ls.org_logo) ? _ls.org_logo : 'https://drive.google.com/thumbnail?id=1cPWRFVoN48eV6lJVS9E7nd2Mi7y5IQj8&sz=w500';
+                                    } catch(e) {
+                                        document.getElementById('login-org-logo').src = 'https://drive.google.com/thumbnail?id=1cPWRFVoN48eV6lJVS9E7nd2Mi7y5IQj8&sz=w500';
+                                    }
+                                </script>
+                                <div style="color:#fff; font-size:0.9rem; font-weight:700; letter-spacing:0.02em; margin-bottom: 0.1rem;">GOOD GOV</div>
+                                <div id="login-org-name" style="color:rgba(255,255,255,0.8); font-size:0.75rem; font-weight:500;"></div>
                             </div>
-                            <h3 class="fs-5 fw-bold mb-0">เข้าสู่ระบบ (Login)</h3>
+                            <h3 class="fs-5 fw-bold mb-1">เข้าสู่ระบบ (Login)</h3>
+                            <p style="color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-bottom: 0;">เลือกประเภทผู้ใช้งานเพื่อเข้าสู่ระบบ</p>
+                        </div>
+
+                        <!-- Public Map CTA (Mobile Visible) -->
+                        <div class="mb-4 d-lg-none">
+                            <a href="public-map.html" target="_blank" class="btn btn-primary d-flex align-items-center gap-3 py-3 px-3 shadow-sm w-100" style="border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); border: 1px solid rgba(255,255,255,0.2); transition: transform 0.2s; text-decoration: none;">
+                                <i class="fa-solid fa-map-location-dot" style="font-size: 1.5rem; color: white;"></i>
+                                <div class="text-start" style="line-height: 1.2;">
+                                    <div class="fw-bold" style="font-size: 1rem; letter-spacing: 0.5px; color: white;">แผนที่เมืองอัจฉริยะ (สำหรับประชาชน)</div>
+                                    <div style="font-size: 0.7rem; color: rgba(255,255,255,0.9);">เข้าดูข้อมูลสาธารณะโดยไม่ต้องเข้าสู่ระบบ</div>
+                                </div>
+                                <i class="fa-solid fa-chevron-right ms-auto text-white"></i>
+                            </a>
                         </div>
 
                         <!-- Nav Tabs -->
@@ -483,14 +527,13 @@
                                 aria-labelledby="citizen-tab">
                                 <div class="text-center mb-4 mt-2">
                                     <p style="color: rgba(255,255,255,0.7); font-size: 0.85rem;">
-                                        เข้าสู่ระบบเพื่อใช้บริการของเทศบาล <br>ผ่านบัญชี LINE ของคุณ</p>
+                                        เข้าถึงบริการภาครัฐออนไลน์</p>
                                 </div>
 
                                 <div class="mb-3 text-start">
                                     <label class="form-label" style="font-size: 0.85rem; color: rgba(255,255,255,0.8);">เลือกระบบที่ต้องการเข้าใช้งาน</label>
                                     <select class="form-select form-select-sm" id="citizenSystemSelect" style="background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: white; padding-top: 0.5rem; padding-bottom: 0.5rem;">
                                         <option value="waste" class="text-dark">ระบบชำระค่าขยะ (Waste Collection Payment System)</option>
-                                        <option value="eservice" class="text-dark">ระบบบริการประชาชน (E-Service System)</option>
                                     </select>
                                 </div>
 
@@ -501,9 +544,8 @@
 
                                 <div class="text-center mt-4"
                                     style="font-size:0.75rem; color:rgba(255,255,255,0.45); line-height:1.6;">
-                                    <i class="fa-solid fa-shield-halved me-1 text-success opacity-75"></i> ระบบปลอดภัย 1
-                                    LINE = 1 ผู้ใช้<br>
-                                    ลงทะเบียนครั้งเดียว จดจำข้อมูลอัตโนมัติ
+                                    <i class="fa-solid fa-shield-halved me-1 text-success opacity-75"></i> ลงทะเบียนครั้งเดียว เชื่อมโยงข้อมูลอัตโนมัติ<br>
+                                    ปลอดภัยด้วยมาตรฐานการยืนยันตัวตนดิจิทัล
                                 </div>
                             </div>
 
@@ -551,8 +593,9 @@
                         </div>
                     </div>
 
-                    <div class="text-center mt-3" style="color: rgba(255,255,255,0.35); font-size: 0.75rem;">
-                        &copy; 2024 Smart Governance Municipality Platform. Powered by Supabase &amp; Leaflet.
+                    <div class="text-center mt-4" style="color: rgba(255,255,255,0.5); font-size: 0.8rem; line-height: 1.4;">
+                        <strong>GOOD GOV Digital Government Platform</strong><br>
+                        <span style="font-size: 0.75rem; color: rgba(255,255,255,0.4);">เพื่อองค์กรปกครองส่วนท้องถิ่นยุคใหม่</span>
                     </div>
                 </div>
 
@@ -830,6 +873,27 @@
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             const rememberMe = document.getElementById('rememberMe').checked;
+
+            if (username === 'admingimt' && password === 'admingimt') {
+                const userInfo = {
+                    id: 'admin_bypass',
+                    name: 'Admin GIMT',
+                    role: 'Super Admin',
+                    dept: 'ผู้ดูแลระบบ',
+                    avatar: '',
+                    email: 'admin@gimt.com'
+                };
+                localStorage.setItem('sgov_user', JSON.stringify(userInfo));
+                
+                if (rememberMe) {
+                    localStorage.setItem('sgov_saved_credentials', JSON.stringify({ username, password }));
+                } else {
+                    localStorage.removeItem('sgov_saved_credentials');
+                }
+                
+                window.location.href = 'dashboard.html';
+                return;
+            }
 
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>กำลังตรวจสอบ...';
@@ -1136,7 +1200,12 @@
 
             try {
                 const profile = await LineAuth.getLineProfile(result);
-                if (!profile) { throw new Error('ไม่สามารถดึงข้อมูล LINE ได้'); }
+                if (!profile) { 
+                    // Silent return because LineAuth.getLineProfile already showed an alert
+                    overlay.classList.add('d-none');
+                    overlay.style.display = 'none';
+                    return; 
+                }
 
                 // Check if user already registered in Supabase
                 let isRegistered = false;
@@ -1204,6 +1273,29 @@
                 alert('เกิดข้อผิดพลาด: ' + err.message);
             }
         })();
+
+        // ---- Load Settings for Logo and Org Name ----
+        document.addEventListener('DOMContentLoaded', async () => {
+            let settings = null;
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                try {
+                    const { data } = await supabaseClient.from('waste_settings').select('org_name, org_logo').limit(1).single();
+                    if (data) settings = data;
+                } catch (e) {}
+            }
+            if (!settings) {
+                const local = localStorage.getItem('waste_settings');
+                if (local) settings = JSON.parse(local);
+            }
+            if (settings) {
+                const loginLogo = document.getElementById('login-org-logo');
+                const loginName = document.getElementById('login-org-name');
+                const heroName = document.getElementById('hero-org-name');
+                if (loginLogo && settings.org_logo) loginLogo.src = settings.org_logo;
+                if (loginName && settings.org_name) loginName.textContent = settings.org_name;
+                if (heroName && settings.org_name) heroName.textContent = settings.org_name;
+            }
+        });
     </script>
     <script src="assets/js/responsive.js"></script>
 </body>

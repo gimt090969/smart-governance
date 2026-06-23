@@ -41,7 +41,9 @@
                 </div>
             </div>
             <div class="flex gap-2">
-                <button class="btn btn-sm btn-outline-secondary" onclick="exportRegistry()"><i class="fa-solid fa-file-excel me-1"></i>Export</button>
+                <input type="file" id="importFile" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" style="display: none;" onchange="handleImportFile(event)">
+                <button id="importBtn" class="btn btn-sm btn-outline-primary" onclick="document.getElementById('importFile').click()"><i class="fa-solid fa-file-import me-1"></i>Import</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="exportRegistry()"><i class="fa-solid fa-file-export me-1"></i>Export</button>
                 <button class="btn btn-sm btn-warning text-dark fw-semibold" onclick="openAddPole()"><i class="fa-solid fa-plus me-1"></i>ลงทะเบียนเสาไฟใหม่</button>
             </div>
         </div>
@@ -69,29 +71,36 @@
         <!-- Filters -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 mb-4">
             <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <div class="search-box"><i class="fa-solid fa-search"></i>
-                    <input type="text" class="form-control form-control-sm" id="fSearch" placeholder="ค้นหารหัสเสา, สถานที่..." oninput="renderTable()"></div>
+                <div class="col-md-3">
+                    <div class="position-relative">
+                        <i class="fa-solid fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                        <input type="text" class="form-control form-control-sm ps-5" id="fSearch" placeholder="ค้นหารหัสเสา, สถานที่..." oninput="onFilterChange()">
+                    </div>
                 </div>
                 <div class="col-md-2">
-                    <select class="form-select form-select-sm" id="fVillage" onchange="renderTable()">
+                    <select class="form-select form-select-sm" id="fVillage" onchange="onFilterChange()">
                         <option value="">ทุกหมู่</option>
                         <option value="1">หมู่ 1</option><option value="2">หมู่ 2</option><option value="3">หมู่ 3</option><option value="4">หมู่ 4</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select class="form-select form-select-sm" id="fType" onchange="renderTable()">
+                    <select class="form-select form-select-sm" id="fType" onchange="onFilterChange()">
                         <option value="">ทุกประเภท</option>
                         <option>คอนกรีต</option><option>เหล็ก</option><option>ไม้</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <select class="form-select form-select-sm" id="fStatus" onchange="renderTable()">
+                    <select class="form-select form-select-sm" id="fStatus" onchange="onFilterChange()">
                         <option value="">ทุกสถานะ</option>
                         <option value="normal">ปกติ</option><option value="broken">ชำรุด</option>
                     </select>
                 </div>
-                <div class="col-md-2 text-end"><span class="text-xs text-muted" id="countLabel">-</span></div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" id="fLight" onchange="onFilterChange()">
+                        <option value="">ทุกหลอดไฟ</option>
+                    </select>
+                </div>
+                <div class="col-md-1 text-end"><span class="text-xs text-muted" id="countLabel">-</span></div>
             </div>
         </div>
 
@@ -105,6 +114,9 @@
                     </tr></thead>
                     <tbody id="tBody"><tr><td colspan="9" class="text-center py-4 text-muted">กำลังโหลด...</td></tr></tbody>
                 </table>
+            </div>
+            <!-- Pagination UI -->
+            <div class="p-3 border-top d-flex justify-content-between align-items-center" id="paginationBox">
             </div>
         </div>
     </div>
@@ -196,6 +208,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="assets/js/supabase-client.js"></script>
 <script src="assets/js/app.js"></script>
 <script>
@@ -204,9 +217,10 @@ const API='http://localhost:3000/api/electric';
 const GOOGLE_APP_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxKIXR_S19sycQA1pDX0BKmPFgUzPT_U41DFOyrK9MRiLSm40qaMBzgF7G8VPIG-vq8/exec';
 
 let allPoles=[],map=null,marker=null;
-const DLAT=13.7563,DLNG=100.5018;
+let currentPage = 1;
+const rowsPerPage = 20;
 
-document.addEventListener('DOMContentLoaded',()=>{loadPoles()});
+document.addEventListener('DOMContentLoaded', ()=>{loadPoles()});
 
 async function loadPoles(){
     if (supabaseClient) {
@@ -224,7 +238,48 @@ async function loadPoles(){
     document.getElementById('kNormal').textContent=allPoles.filter(p=>p.status==='normal').length;
     document.getElementById('kBroken').textContent=allPoles.filter(p=>p.status==='broken').length;
     document.getElementById('kPhoto').textContent=allPoles.filter(p=>p.image_url).length;
+    updateFilters();
     renderTable();
+}
+
+function updateFilters() {
+    const fVillage = document.getElementById('fVillage');
+    const fType = document.getElementById('fType');
+    const fLight = document.getElementById('fLight');
+    const pfVillage = document.getElementById('pfVillage');
+    const pfType = document.getElementById('pfType');
+    
+    const currentVillage = fVillage.value;
+    const currentType = fType.value;
+    const currentLight = fLight ? fLight.value : '';
+    const currentPfVillage = pfVillage ? pfVillage.value : '';
+    const currentPfType = pfType ? pfType.value : '';
+
+    const villages = [...new Set(allPoles.map(p => p.village_no).filter(Boolean))].sort((a,b)=>{
+        const na = parseInt(a); const nb = parseInt(b);
+        if(!isNaN(na) && !isNaN(nb)) return na - nb;
+        return String(a).localeCompare(String(b), 'th');
+    });
+    const types = [...new Set(allPoles.map(p => p.pole_type).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b), 'th'));
+    const lights = [...new Set(allPoles.map(p => p.light_type).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b), 'th'));
+
+    fVillage.innerHTML = '<option value="">ทุกหมู่</option>' + 
+        villages.map(v => `<option value="${v}" ${v === currentVillage ? 'selected' : ''}>หมู่ ${v}</option>`).join('');
+
+    fType.innerHTML = '<option value="">ทุกประเภท</option>' + 
+        types.map(t => `<option value="${t}" ${t === currentType ? 'selected' : ''}>${t}</option>`).join('');
+
+    if (fLight) {
+        fLight.innerHTML = '<option value="">ทุกหลอดไฟ</option>' + 
+            lights.map(l => `<option value="${l}" ${l === currentLight ? 'selected' : ''}>${l}</option>`).join('');
+    }
+        
+    if (pfVillage) {
+        pfVillage.innerHTML = villages.map(v => `<option value="${v}" ${v === currentPfVillage ? 'selected' : ''}>หมู่ ${v}</option>`).join('');
+    }
+    if (pfType) {
+        pfType.innerHTML = types.map(t => `<option value="${t}" ${t === currentPfType ? 'selected' : ''}>${t}</option>`).join('');
+    }
 }
 
 function getDriveImgUrl(url) {
@@ -238,20 +293,35 @@ function getDriveImgUrl(url) {
     return url;
 }
 
+function onFilterChange() {
+    currentPage = 1;
+    renderTable();
+}
+
 function renderTable(){
     let data=[...allPoles];
     const q=(document.getElementById('fSearch').value||'').toLowerCase();
     const v=document.getElementById('fVillage').value;
     const t=document.getElementById('fType').value;
     const s=document.getElementById('fStatus').value;
+    const l=document.getElementById('fLight') ? document.getElementById('fLight').value : '';
     if(q) data=data.filter(p=>(p.pole_code+'|'+p.location_detail).toLowerCase().includes(q));
     if(v) data=data.filter(p=>p.village_no===v);
     if(t) data=data.filter(p=>p.pole_type===t);
     if(s) data=data.filter(p=>p.status===s);
-    document.getElementById('countLabel').textContent=`แสดง ${data.length} / ${allPoles.length} รายการ`;
+    if(l) data=data.filter(p=>p.light_type===l);
+    
+    document.getElementById('countLabel').textContent=`แสดงทั้งหมด ${data.length} รายการ`;
+
+    const totalPages = Math.ceil(data.length / rowsPerPage) || 1;
+    if (currentPage > totalPages) currentPage = totalPages;
+    const startIdx = (currentPage - 1) * rowsPerPage;
+    const pagedData = data.slice(startIdx, startIdx + rowsPerPage);
+
     const tb=document.getElementById('tBody');
-    if(!data.length){tb.innerHTML='<tr><td colspan="9" class="text-center py-4 text-muted">ไม่พบข้อมูล</td></tr>';return}
-    tb.innerHTML=data.map(p=>{
+    if(!pagedData.length){tb.innerHTML='<tr><td colspan="9" class="text-center py-4 text-muted">ไม่พบข้อมูล</td></tr>'; renderPagination(totalPages); return;}
+    
+    tb.innerHTML=pagedData.map(p=>{
         const safeUrl = getDriveImgUrl(p.image_url);
         const img=safeUrl?`<img src="${safeUrl}" class="pole-img" onclick="viewImage('${p.pole_code}','${safeUrl}')">`
             :'<div class="pole-img-placeholder"><i class="fa-solid fa-image"></i></div>';
@@ -268,6 +338,46 @@ function renderTable(){
                 <button class="btn btn-xs btn-outline-danger" onclick="delPole('${p.id}')"><i class="fa-solid fa-trash"></i></button>
             </td></tr>`;
     }).join('');
+    
+    renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+    const box = document.getElementById('paginationBox');
+    if (!box) return;
+    
+    let html = `
+        <div class="text-sm text-muted">หน้า <strong>${currentPage}</strong> จาก ${totalPages}</div>
+        <ul class="pagination pagination-sm mb-0">
+            <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                <button class="page-link" onclick="changePage(${currentPage - 1})"><i class="fa-solid fa-chevron-left"></i></button>
+            </li>
+    `;
+    
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <button class="page-link" onclick="changePage(${i})">${i}</button>
+                 </li>`;
+    }
+
+    html += `
+            <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                <button class="page-link" onclick="changePage(${currentPage + 1})"><i class="fa-solid fa-chevron-right"></i></button>
+            </li>
+        </ul>
+    `;
+    box.innerHTML = html;
+}
+
+function changePage(page) {
+    currentPage = page;
+    renderTable();
 }
 
 function openAddPole(){
@@ -467,6 +577,88 @@ function exportRegistry(){
     const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='electric_poles_registry.csv';a.click();
     showToast('Export CSV สำเร็จ','success');
+}
+
+async function handleImportFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const btn = document.getElementById('importBtn');
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>กำลังนำเข้า...';
+    btn.disabled = true;
+
+    try {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+        if (rows.length === 0) throw new Error("ไม่พบข้อมูลในไฟล์");
+
+        const payloadsMap = new Map();
+        rows.forEach(row => {
+            const pole_code = row['รหัสเสา'] || row['pole_code'];
+            if (!pole_code) return; // Skip empty rows
+
+            let v_raw = String(row['หมู่ที่'] || row['village_no'] || '1');
+            let v_match = v_raw.match(/\d+/);
+            let v_no = v_match ? v_match[0] : '1';
+
+            const clean_pole_code = String(pole_code).substring(0, 50).trim();
+
+            payloadsMap.set(clean_pole_code, {
+                pole_code: clean_pole_code,
+                pole_type: String(row['ประเภทเสา'] || row['pole_type'] || 'คอนกรีต').substring(0, 50),
+                light_type: String(row['หลอดไฟ'] || row['light_type'] || 'LED').substring(0, 50),
+                village_no: v_no,
+                location_detail: String(row['สถานที่'] || row['location_detail'] || '').substring(0, 255),
+                lat: parseFloat(row['Lat'] || row['lat'] || 0) || 0,
+                lng: parseFloat(row['Lng'] || row['lng'] || 0) || 0,
+                status: String(row['สถานะ'] || row['status'] || 'normal').substring(0, 20)
+            });
+        });
+
+        const payloads = Array.from(payloadsMap.values());
+
+        if (payloads.length === 0) throw new Error("ไม่พบข้อมูลที่ถูกต้อง (ต้องมีคอลัมน์ รหัสเสา)");
+
+        if (!supabaseClient) throw new Error("ไม่สามารถเชื่อมต่อฐานข้อมูลได้");
+
+        const toInsert = [];
+        const toUpdate = [];
+
+        payloads.forEach(p => {
+            const existing = allPoles.find(x => x.pole_code === p.pole_code);
+            if (existing) {
+                toUpdate.push({ ...p, id: existing.id });
+            } else {
+                toInsert.push(p);
+            }
+        });
+        
+        if (toInsert.length > 0) {
+            const { error } = await supabaseClient.from('electric_poles').insert(toInsert);
+            if (error) throw error;
+        }
+        if (toUpdate.length > 0) {
+            for (const item of toUpdate) {
+                const { error } = await supabaseClient.from('electric_poles').update(item).eq('id', item.id);
+                if (error) throw error;
+            }
+        }
+
+        showToast(`นำเข้าข้อมูลสำเร็จ ${payloads.length} รายการ (ใหม่ ${toInsert.length}, อัปเดต ${toUpdate.length})`, 'success');
+        loadPoles();
+    } catch (err) {
+        console.error(err);
+        showToast('เกิดข้อผิดพลาดในการนำเข้า: ' + err.message, 'danger');
+    } finally {
+        btn.innerHTML = oldHtml;
+        btn.disabled = false;
+        event.target.value = ''; // Reset input
+    }
 }
 
 document.getElementById('poleModal').addEventListener('hidden.bs.modal',()=>{

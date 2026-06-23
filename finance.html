@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/responsive.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
 <nav id="sidebar"></nav>
@@ -29,38 +30,50 @@
 
         <!-- KPI Cards -->
         <div class="row g-3 mb-4">
-            <div class="col-6 col-xl-3"><div class="kpi-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div><div class="kpi-label mb-1">รายได้วันนี้ (บาท)</div><div class="kpi-value text-primary">1,855</div></div>
-                    <div class="kpi-icon bg-primary bg-opacity-10 text-primary"><i class="fa-solid fa-coins"></i></div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card" style="border-left: 4px solid #3b82f6;">
+                    <div class="text-muted small fw-semibold mb-1">รายได้ค่าขยะวันนี้ (บาท)</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="fw-bold mb-0 text-primary" id="finance-kpi-today-rev">0</h3>
+                        <div class="kpi-icon text-primary bg-primary bg-opacity-10"><i class="fa-solid fa-coins"></i></div>
+                    </div>
                 </div>
-            </div></div>
-            <div class="col-6 col-xl-3"><div class="kpi-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div><div class="kpi-label mb-1">ภาษีค้างชำระ (ราย)</div><div class="kpi-value text-danger">342</div></div>
-                    <div class="kpi-icon bg-danger bg-opacity-10 text-danger"><i class="fa-solid fa-file-invoice"></i></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card" style="border-left: 4px solid #10b981;">
+                    <div class="text-muted small fw-semibold mb-1">รายได้ค่าขยะเดือนนี้ (บาท)</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="fw-bold mb-0 text-success" id="finance-kpi-rev-month">0</h3>
+                        <div class="kpi-icon text-success bg-success bg-opacity-10"><i class="fa-solid fa-check-circle"></i></div>
+                    </div>
                 </div>
-            </div></div>
-            <div class="col-6 col-xl-3"><div class="kpi-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div><div class="kpi-label mb-1">ค่าขยะค้างชำระ (ราย)</div><div class="kpi-value text-warning">128</div></div>
-                    <div class="kpi-icon bg-warning bg-opacity-10 text-warning"><i class="fa-solid fa-trash-can"></i></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card" style="border-left: 4px solid #8b5cf6;">
+                    <div class="text-muted small fw-semibold mb-1">รายได้สะสมปีนี้ (บาท)</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="fw-bold mb-0 text-purple" style="color: #6d28d9;" id="finance-kpi-rev-year">0</h3>
+                        <div class="kpi-icon text-purple bg-purple bg-opacity-10" style="color: #6d28d9; background: #ede9fe;"><i class="fa-solid fa-chart-line"></i></div>
+                    </div>
                 </div>
-            </div></div>
-            <div class="col-6 col-xl-3"><div class="kpi-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div><div class="kpi-label mb-1">รายได้เดือนนี้</div><div class="kpi-value text-success">412K</div></div>
-                    <div class="kpi-icon bg-success bg-opacity-10 text-success"><i class="fa-solid fa-chart-line"></i></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card" style="border-left: 4px solid #ef4444;">
+                    <div class="text-muted small fw-semibold mb-1">ค้างชำระเดือนนี้ (ราย)</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="fw-bold mb-0 text-danger" id="finance-kpi-unpaid">0</h3>
+                        <div class="kpi-icon text-danger bg-danger bg-opacity-10"><i class="fa-solid fa-trash-can"></i></div>
+                    </div>
                 </div>
-            </div></div>
+            </div>
         </div>
 
         <!-- Module Tiles -->
         <h6 class="fw-semibold text-muted mb-3" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">โมดูลย่อย</h6>
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-3">
-                <a href="tax-map.html" class="module-tile" style="background:linear-gradient(135deg,#1a56db,#3b82f6);">
-                    <i class="fa-solid fa-map-location-dot"></i><h5>ระบบแผนที่ภาษี</h5><small>LTAX GIS Online</small>
+                <a href="#" class="module-tile opacity-75" style="background:linear-gradient(135deg,#1a56db,#3b82f6); cursor:not-allowed;" onclick="return false;">
+                    <i class="fa-solid fa-map-location-dot"></i><h5>ระบบแผนที่ภาษี</h5><small>(ยังไม่มีบริการ)</small>
                 </a>
             </div>
             <div class="col-6 col-md-3">
@@ -69,13 +82,13 @@
                 </a>
             </div>
             <div class="col-6 col-md-3">
-                <a href="water.html" class="module-tile" style="background:linear-gradient(135deg,#0694a2,#22d3ee);">
-                    <i class="fa-solid fa-faucet-drip"></i><h5>ประปาหมู่บ้าน</h5><small>จดมาตร · E-Invoice</small>
+                <a href="#" class="module-tile opacity-75" style="background:linear-gradient(135deg,#0694a2,#22d3ee); cursor:not-allowed;" onclick="return false;">
+                    <i class="fa-solid fa-faucet-drip"></i><h5>ประปาหมู่บ้าน</h5><small>(ยังไม่มีบริการ)</small>
                 </a>
             </div>
             <div class="col-6 col-md-3">
-                <a href="#" class="module-tile" style="background:linear-gradient(135deg,#5b21b6,#8b5cf6);" onclick="showToast('ระบบพัสดุอยู่ระหว่างพัฒนา','info'); return false;">
-                    <i class="fa-solid fa-boxes-stacked"></i><h5>พัสดุและครุภัณฑ์</h5><small>Barcode · สต๊อก</small>
+                <a href="#" class="module-tile opacity-75" style="background:linear-gradient(135deg,#5b21b6,#8b5cf6); cursor:not-allowed;" onclick="return false;">
+                    <i class="fa-solid fa-boxes-stacked"></i><h5>พัสดุและครุภัณฑ์</h5><small>(ยังไม่มีบริการ)</small>
                 </a>
             </div>
         </div>
@@ -93,38 +106,12 @@
                             <th class="ps-4">ใบเสร็จเลขที่</th><th>ผู้ชำระ</th><th>ประเภท</th>
                             <th class="text-end">จำนวนเงิน</th><th>ช่องทาง</th><th>เวลา</th><th class="pe-4">สถานะ</th>
                         </tr></thead>
-                        <tbody>
-                            <tr>
-                                <td class="ps-4 fw-semibold text-xs">REC-660428-001</td>
-                                <td>นายสมพงษ์ ยินดี</td>
-                                <td><span class="badge" style="background:#e8efff;color:#1a56db;">ภาษีที่ดินฯ</span></td>
-                                <td class="text-end fw-semibold">฿1,250.00</td>
-                                <td><span class="text-xs"><i class="fa-solid fa-qrcode text-primary me-1"></i>PromptPay</span></td>
-                                <td class="text-xs text-muted">09:15</td>
-                                <td class="pe-4"><span class="badge bg-success">สมบูรณ์</span></td>
-                            </tr>
-                            <tr>
-                                <td class="ps-4 fw-semibold text-xs">REC-660428-002</td>
-                                <td>นางวิไลวรรณ งามตา</td>
-                                <td><span class="badge" style="background:#ecfdf5;color:#057a55;">ค่าขยะรายปี</span></td>
-                                <td class="text-end fw-semibold">฿480.00</td>
-                                <td><span class="text-xs"><i class="fa-solid fa-money-bill-wave text-muted me-1"></i>เงินสด</span></td>
-                                <td class="text-xs text-muted">10:05</td>
-                                <td class="pe-4"><span class="badge bg-success">สมบูรณ์</span></td>
-                            </tr>
-                            <tr>
-                                <td class="ps-4 fw-semibold text-xs">REC-660428-003</td>
-                                <td>นายชูชาติ มั่งมี</td>
-                                <td><span class="badge" style="background:#ecfeff;color:#0694a2;">ค่าน้ำประปา</span></td>
-                                <td class="text-end fw-semibold">฿125.50</td>
-                                <td><span class="text-xs"><i class="fa-solid fa-qrcode text-primary me-1"></i>PromptPay</span></td>
-                                <td class="text-xs text-muted">11:30</td>
-                                <td class="pe-4"><span class="badge bg-success">สมบูรณ์</span></td>
-                            </tr>
+                        <tbody id="today-payments-body">
+                            <tr><td colspan="7" class="text-center py-4 text-muted">กำลังโหลดข้อมูล...</td></tr>
                         </tbody>
                         <tfoot><tr style="background:#f9fafb;">
                             <td colspan="3" class="ps-4 text-end fw-bold">ยอดรวมวันนี้:</td>
-                            <td class="text-end fw-bold text-success">฿1,855.50</td>
+                            <td class="text-end fw-bold text-success" id="today-payments-total">฿0.00</td>
                             <td colspan="3" class="pe-4"></td>
                         </tr></tfoot>
                     </table>
@@ -134,7 +121,75 @@
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script src="assets/js/app.js"></script>
-    <script src="assets/js/responsive.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="assets/js/supabase-client.js"></script>
+<script src="assets/js/app.js?v=1781176864661"></script>
+<script src="assets/js/waste.js?v=1781176864661"></script>
+<script src="assets/js/responsive.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    Swal.fire({title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+    try {
+        initWasteData();
+        
+        // 1. Initial Render with Local Storage Data
+        const renderFinanceStats = () => {
+            const stats = getWasteDashboardStats();
+            
+            // Revenue Today & Count
+            const targetDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+            
+            const payments = getWastePayments();
+            const todayPayments = payments.filter(p => p.date === targetDate && p.status === 'completed');
+            const todayRev = todayPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+            
+            const currentMonthStr = targetDate.substring(0, 7);
+            const monthPayments = payments.filter(p => p.date && p.date.startsWith(currentMonthStr) && p.status === 'completed');
+            const monthRev = monthPayments.reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
+            
+            document.getElementById('finance-kpi-today-rev').textContent = formatMoney(todayRev);
+            document.getElementById('finance-kpi-rev-month').textContent = formatMoney(stats.revenueThisMonth);
+            document.getElementById('finance-kpi-rev-year').textContent = formatMoney(stats.revenueThisYear);
+            document.getElementById('finance-kpi-unpaid').textContent = formatMoney(stats.unpaidThisMonth);
+            
+            // Today Payments Table
+            const tbody = document.getElementById('today-payments-body');
+            tbody.innerHTML = todayPayments.length ? todayPayments.map(p => `<tr>
+                <td class="ps-4 fw-semibold text-xs">${p.receipt_no || p.id}</td>
+                <td>${p.customer_name || 'ไม่ระบุ'}</td>
+                <td><span class="badge" style="background:#ecfdf5;color:#057a55;">ค่าธรรมเนียมขยะ</span></td>
+                <td class="text-end fw-semibold">฿${formatMoneyDecimal(p.amount)}</td>
+                <td><span class="text-xs"><i class="fa-solid ${p.method==='เงินสด'?'fa-money-bill-wave text-success':p.method==='โอน'?'fa-building-columns text-info':'fa-qrcode text-primary'} me-1"></i>${p.method || 'เงินสด'}</span></td>
+                <td class="text-xs text-muted">${p.time || '-'}</td>
+                <td class="pe-4"><span class="badge bg-success">สมบูรณ์</span></td>
+            </tr>`).join('') : '<tr><td colspan="7" class="text-center py-4 text-muted">ยังไม่มีรายการรับชำระในวันนี้</td></tr>';
+            
+            document.getElementById('today-payments-total').textContent = '฿' + formatMoneyDecimal(todayRev);
+        };
+
+        // Show loading state initially
+        document.getElementById('finance-kpi-today-rev').textContent = '-';
+        document.getElementById('finance-kpi-rev-month').textContent = '-';
+        document.getElementById('finance-kpi-rev-year').textContent = '-';
+        document.getElementById('finance-kpi-unpaid').textContent = '-';
+
+        // 2. Fetch fresh data in background
+        await Promise.all([
+            fetchWasteFeeTypes(),
+            fetchWasteCustomers(),
+            fetchMonthlyStatus(),
+            fetchWastePayments()
+        ]);
+        
+        // 3. Re-render once fresh data arrives
+        renderFinanceStats();
+        
+        Swal.close();
+    } catch(e) {
+        console.error(e);
+        Swal.close();
+    }
+});
+</script>
 </body>
 </html>
