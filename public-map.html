@@ -91,50 +91,51 @@
         <!-- Bottom Navigation / Layer Toggle -->
         <div class="bottom-sheet glass-panel">
             <div class="drag-handle"></div>
-            <div class="d-flex justify-content-between align-items-center mb-3 px-3">
+            <div class="d-flex justify-content-between align-items-center mb-1 px-3">
                 <h5 class="text-white font-bold mb-0">หมวดหมู่ข้อมูลสาธารณะ</h5>
                 <button id="toggleLayerGridBtn" class="btn btn-sm btn-link text-slate-300 hover:text-white p-0">
                     <i class="fa-solid fa-chevron-down"></i>
                 </button>
             </div>
+            <div class="px-3 mb-3 text-slate-400" style="font-size: 0.8rem;">แตะเพื่อเปิดชั้นข้อมูล</div>
             <div class="layer-grid px-2 pb-4">
                 <button class="layer-btn active" data-layer="boundarySubdistrict">
                     <i class="fa-solid fa-draw-polygon text-purple-600"></i>
                     <span>แนวเขตตำบล</span>
                 </button>
-                <button class="layer-btn active" data-layer="boundaryMarker">
+                <button class="layer-btn" data-layer="boundaryMarker">
                     <i class="fa-solid fa-location-pin text-indigo-600"></i>
                     <span>หมุดหลักเขต</span>
                 </button>
-                <button class="layer-btn active" data-layer="boundaryVillage">
+                <button class="layer-btn" data-layer="boundaryVillage">
                     <i class="fa-solid fa-draw-polygon text-emerald-600"></i>
                     <span>ขอบเขตหมู่บ้าน</span>
                 </button>
-                <button class="layer-btn active" data-layer="roads">
+                <button class="layer-btn" data-layer="roads">
                     <i class="fa-solid fa-road text-danger"></i>
                     <span>ทะเบียนถนนสายทาง</span>
                 </button>
-                <button class="layer-btn active" data-layer="plannedRoads">
+                <button class="layer-btn" data-layer="plannedRoads">
                     <i class="fa-solid fa-road-circle-exclamation text-warning"></i>
                     <span>ถนนในแผนพัฒนา</span>
                 </button>
-                <button class="layer-btn active" data-layer="lighting">
+                <button class="layer-btn" data-layer="lighting">
                     <i class="fa-solid fa-bolt text-warning"></i>
                     <span>ไฟฟ้าส่องสว่าง</span>
                 </button>
-                <button class="layer-btn active" data-layer="water">
+                <button class="layer-btn" data-layer="water">
                     <i class="fa-solid fa-circle text-sky-500"></i>
                     <span>แหล่งน้ำ & สระ</span>
                 </button>
-                <button class="layer-btn active" data-layer="waterways">
+                <button class="layer-btn" data-layer="waterways">
                     <i class="fa-solid fa-droplet text-sky-600"></i>
                     <span>ลำคลอง & ลำห้วย</span>
                 </button>
-                <button class="layer-btn active" data-layer="drainage">
+                <button class="layer-btn" data-layer="drainage">
                     <i class="fa-solid fa-circle text-emerald-500"></i>
                     <span>ราง & ฝาท่อระบายน้ำ</span>
                 </button>
-                <button class="layer-btn active" data-layer="publicLand">
+                <button class="layer-btn" data-layer="publicLand">
                     <i class="fa-solid fa-square text-success"></i>
                     <span>ที่ดินสาธารณะ</span>
                 </button>
