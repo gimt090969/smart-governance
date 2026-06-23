@@ -27,7 +27,7 @@
                 </ol></nav>
             </div>
             <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-outline-success" onclick="showToast('Export Excel สำเร็จ','success')"><i class="fa-solid fa-file-excel me-1"></i>Excel</button>
+                <button class="btn btn-sm btn-outline-success" onclick="exportCurrentTabExcel()"><i class="fa-solid fa-file-excel me-1"></i>Excel</button>
                 <button class="btn btn-sm btn-outline-danger" onclick="exportCurrentTabPDF()"><i class="fa-solid fa-file-pdf me-1"></i>PDF</button>
             </div>
         </div>
@@ -38,6 +38,7 @@
             <li class="nav-item"><a class="nav-link fw-semibold" data-bs-toggle="tab" href="#tabDaily">รายวัน</a></li>
             <li class="nav-item"><a class="nav-link fw-semibold" data-bs-toggle="tab" href="#tabMonthly">รายเดือน</a></li>
             <li class="nav-item"><a class="nav-link fw-semibold" data-bs-toggle="tab" href="#tabYearly">รายปี</a></li>
+            <li class="nav-item"><a class="nav-link fw-semibold" data-bs-toggle="tab" href="#tabExempt">รายการยกเว้นค่าธรรมเนียม</a></li>
         </ul>
 
         <div class="tab-content">
@@ -46,11 +47,23 @@
                 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                     <h5 class="fw-bold mb-0">รายการรับชำระทั้งหมด</h5>
                     <div class="d-flex align-items-center gap-2">
+                        <!-- Year filter buttons -->
+                        <div class="btn-group me-2" role="group" id="yearFilterGroup">
+                            <button type="button" class="btn btn-sm btn-outline-secondary active" onclick="setAllYearFilter('all', this)">รวมทั้งหมดทุกปี</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setAllYearFilter('2568', this)">2568</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setAllYearFilter('2569', this)">2569</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setAllYearFilter('2570', this)">2570</button>
+                        </div>
+                        <input type="text" id="searchReceipt" class="form-control form-control-sm" style="width: 130px;" placeholder="ค้นหาเลขใบเสร็จ" onkeyup="renderReports()">
+                        <input type="text" id="searchPayer" class="form-control form-control-sm" style="width: 130px;" placeholder="ค้นหาผู้ชำระ" onkeyup="renderReports()">
+                        <select id="staffFilter" class="form-select form-select-sm" style="width: 150px;" onchange="renderReports()">
+                            <option value="">ทุกเจ้าหน้าที่</option>
+                        </select>
                         <label class="form-label mb-0 text-muted" style="white-space: nowrap;">ตั้งแต่วันที่:</label>
                         <input type="date" id="allStartDate" class="form-control form-control-sm" style="width: 140px;" onchange="renderReports()">
                         <label class="form-label mb-0 text-muted" style="white-space: nowrap;">ถึง:</label>
                         <input type="date" id="allEndDate" class="form-control form-control-sm" style="width: 140px;" onchange="renderReports()">
-                        <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('allStartDate').value=''; document.getElementById('allEndDate').value=''; renderReports();">ดูทั้งหมด</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('allStartDate').value=''; document.getElementById('allEndDate').value=''; document.getElementById('searchReceipt').value=''; document.getElementById('searchPayer').value=''; document.getElementById('staffFilter').value=''; setAllYearFilter('all', document.querySelector('#yearFilterGroup button'));">ดูทั้งหมด</button>
                         <button class="btn btn-sm btn-danger ms-2" onclick="exportAllPDF()" title="พิมพ์ PDF ทั้งหมด"><i class="fa-solid fa-file-pdf me-1"></i>PDF</button>
                     </div>
                 </div>
@@ -62,7 +75,7 @@
                 </div>
                 <div class="card"><div class="card-body p-0"><div class="table-responsive">
                     <table class="table table-hover mb-0">
-                        <thead><tr><th class="ps-4">วันที่/เวลา</th><th>ใบเสร็จ</th><th>ผู้ชำระ</th><th class="text-end">จำนวนเงิน</th><th>ช่องทาง</th><th class="pe-4 text-center">จัดการ</th></tr></thead>
+                        <thead><tr><th class="ps-4">วันที่/เวลา</th><th>ใบเสร็จ</th><th>ผู้ชำระ</th><th>เดือนที่รับชำระ</th><th class="text-end">จำนวนเงิน</th><th>ช่องทาง</th><th>เจ้าหน้าที่ผู้รับชำระ</th><th class="pe-4 text-center">จัดการ</th></tr></thead>
                         <tbody id="allTableBody"></tbody>
                     </table>
                 </div></div></div>
@@ -119,6 +132,29 @@
             <div class="tab-pane fade" id="tabYearly">
                 <div class="card mb-4"><div class="card-body"><canvas id="yearlyChart" height="300"></canvas></div></div>
             </div>
+
+            <!-- Exemptions -->
+            <div class="tab-pane fade" id="tabExempt">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                    <h5 class="fw-bold mb-0">รายการยกเว้นค่าธรรมเนียม</h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 text-muted" style="white-space: nowrap;">ตั้งแต่วันที่:</label>
+                        <input type="date" id="exemptStartDate" class="form-control form-control-sm" style="width: 140px;" onchange="renderReports()">
+                        <label class="form-label mb-0 text-muted" style="white-space: nowrap;">ถึง:</label>
+                        <input type="date" id="exemptEndDate" class="form-control form-control-sm" style="width: 140px;" onchange="renderReports()">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('exemptStartDate').value=''; document.getElementById('exemptEndDate').value=''; renderReports();">ดูทั้งหมด</button>
+                    </div>
+                </div>
+                <div class="row g-3 mb-4">
+                    <div class="col-12"><div class="kpi-card"><div class="d-flex justify-content-between align-items-start"><div><div class="kpi-label mb-1">จำนวนรายการยกเว้นทั้งหมด</div><div class="kpi-value text-warning" id="exemptCount">-</div></div><div class="kpi-icon bg-warning bg-opacity-10 text-warning"><i class="fa-solid fa-ban"></i></div></div></div></div>
+                </div>
+                <div class="card"><div class="card-body p-0"><div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead><tr><th class="ps-4">วันที่/เวลา</th><th>ข้อมูลลูกค้าขยะ</th><th>เดือนที่ยกเว้น</th><th>สาเหตุที่ยกเว้น</th><th>เจ้าหน้าที่ที่ยกเว้น</th><th class="pe-4 text-center">จัดการ</th></tr></thead>
+                        <tbody id="exemptTableBody"></tbody>
+                    </table>
+                </div></div></div>
+            </div>
         </div>
     </div>
 </div>
@@ -132,89 +168,146 @@
 <script src="assets/js/responsive.js"></script>
 <script src="assets/js/waste-receipt.js"></script>
 <script src="assets/js/waste-reports-pdf.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="assets/js/waste-reports-excel.js"></script>
 <script>
 var monthlyChartInstance = null;
 var yearlyChartInstance = null;
+var currentAllYearFilter = 'all';
+
+function setAllYearFilter(year, btnEl) {
+    currentAllYearFilter = year;
+    const buttons = document.querySelectorAll('#yearFilterGroup button');
+    buttons.forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+    renderReports();
+}
 
 document.addEventListener('DOMContentLoaded', async function() {
-    initWasteData();
-    if (typeof fetchWastePayments !== 'undefined') {
-        await fetchWastePayments();
-    }
-    if (typeof fetchWasteCustomers !== 'undefined') {
-        await fetchWasteCustomers();
-    }
-    if (typeof fetchMonthlyStatus !== 'undefined') {
-        await fetchMonthlyStatus();
-    }
-    
-    // Set default values for filters
-    var today = new Date();
-    document.getElementById('filterDate').value = today.toISOString().split('T')[0];
-    
-    var currentYear = today.getMonth() >= 9 ? today.getFullYear() + 543 + 1 : today.getFullYear() + 543;
-    var yearSelect = document.getElementById('filterYear');
-    var yearOptions = Array.from(yearSelect.options).map(function(o){ return o.value; });
-    if (!yearOptions.includes(String(currentYear))) {
-        var opt = document.createElement('option');
-        opt.value = currentYear; opt.text = currentYear;
-        yearSelect.appendChild(opt);
-    }
-    yearSelect.value = currentYear;
+    Swal.fire({title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+    try {
+        initWasteData();
+        
+        // Start fetch immediately for speed
+        const fetchPromise = Promise.all([
+            fetchWasteFeeTypes(),
+            fetchWastePayments(),
+            fetchMonthlyStatus(),
+            fetchWasteCustomers()
+        ]);
+        
+        // 1. Initial Render with Local Storage Data
+        const initReportUI = () => {
+            // Set default values for filters
+            var today = new Date();
+            if (!document.getElementById('filterDate').value) {
+                document.getElementById('filterDate').value = today.toISOString().split('T')[0];
+            }
+            
+            var currentYear = today.getMonth() >= 9 ? today.getFullYear() + 543 + 1 : today.getFullYear() + 543;
+            var yearSelect = document.getElementById('filterYear');
+            var yearOptions = Array.from(yearSelect.options).map(function(o){ return o.value; });
+            if (!yearOptions.includes(String(currentYear))) {
+                var opt = document.createElement('option');
+                opt.value = currentYear; opt.text = currentYear;
+                yearSelect.appendChild(opt);
+            }
+            if (!yearSelect.value) {
+                yearSelect.value = currentYear;
+            }
+        };
 
-    renderReports();
+        // Initialize UI components but do NOT render data until fetched
+        initReportUI();
+
+        // Wait for fresh data
+        await fetchPromise;
+        
+        // 2. Re-render once fresh data arrives
+        renderReports();
+        
+        Swal.close();
+    } catch (e) {
+        console.error(e);
+        Swal.close();
+    }
 });
 
 function renderReports() {
     var payments = getWastePayments();
+    var exemptedPayments = typeof getWasteExemptions === 'function' ? getWasteExemptions() : [];
+
     var msData = typeof getMonthlyStatus === 'function' ? getMonthlyStatus() : {};
     var customers = typeof getWasteCustomers === 'function' ? getWasteCustomers() : [];
     
-    // Calculate total revenue from waste_monthly_status
-    var msTotalRev = 0;
-    var msTotalPayers = new Set();
-    Object.keys(msData).forEach(function(cid) {
-        var cust = customers.find(function(c){ return c.id === cid; });
-        var fee = cust ? (Number(cust.fee) || 0) : 0;
-        Object.keys(msData[cid]).forEach(function(yr) {
-            Object.keys(msData[cid][yr]).forEach(function(mk) {
-                if (msData[cid][yr][mk] === 'paid') {
-                    msTotalRev += fee;
-                    msTotalPayers.add(cid);
-                }
-            });
+    // Populate staffFilter if empty
+    var staffFilterSelect = document.getElementById('staffFilter');
+    if (staffFilterSelect && staffFilterSelect.options.length === 1 && payments.length > 0) {
+        var uniqueStaffs = new Set();
+        payments.forEach(function(p) { if (p.staff) uniqueStaffs.add(p.staff); });
+        Array.from(uniqueStaffs).sort().forEach(function(staff) {
+            var opt = document.createElement('option');
+            opt.value = staff;
+            opt.text = staff;
+            staffFilterSelect.appendChild(opt);
         });
-    });
+    }
 
-    // 0. All Revenue Report
     var startDate = document.getElementById('allStartDate').value;
     var endDate = document.getElementById('allEndDate').value;
+    var searchReceiptInput = document.getElementById('searchReceipt');
+    var searchPayerInput = document.getElementById('searchPayer');
+    var searchReceipt = searchReceiptInput ? searchReceiptInput.value.toLowerCase() : '';
+    var searchPayer = searchPayerInput ? searchPayerInput.value.toLowerCase() : '';
+    var searchStaff = staffFilterSelect ? staffFilterSelect.value : '';
     
     var filteredAllPayments = payments;
-    var isFiltered = false;
+    var isSpecificSearch = (startDate || endDate || searchReceipt || searchPayer || searchStaff);
     
-    if (startDate || endDate) {
-        isFiltered = true;
+    if (isSpecificSearch || currentAllYearFilter !== 'all') {
         filteredAllPayments = payments.filter(function(p) {
             var pass = true;
             if (startDate && p.date < startDate) pass = false;
             if (endDate && p.date > endDate) pass = false;
+            if (searchReceipt && (!p.receipt_no || !p.receipt_no.toLowerCase().includes(searchReceipt))) pass = false;
+            if (searchPayer && (!p.customer_name || !p.customer_name.toLowerCase().includes(searchPayer))) pass = false;
+            if (searchStaff && p.staff !== searchStaff) pass = false;
+            if (currentAllYearFilter !== 'all' && p.fiscal_year !== currentAllYearFilter) pass = false;
             return pass;
         });
     }
 
-    if (isFiltered) {
-        var rangeTotal = filteredAllPayments.reduce(function(s,p){return s+p.amount;},0);
-        var uniquePayers = new Set(filteredAllPayments.map(function(p){return p.customer_id;})).size;
+    var activePayments = filteredAllPayments.filter(function(p){ return p.status !== 'cancelled'; });
+    window.currentFilteredAllPayments = activePayments; // Save globally for exportAllPDF
+    
+    if (isSpecificSearch) {
+        var rangeTotal = activePayments.reduce(function(s,p){return s+p.amount;},0);
+        var uniquePayers = new Set(activePayments.map(function(p){return p.customer_id;})).size;
         document.getElementById('allCount').textContent = uniquePayers;
         document.getElementById('allTotal').textContent = '฿' + formatMoney(rangeTotal);
     } else {
+        // ใช้ข้อมูลจาก กค.3 (สถานะติ๊กถูก) มาคำนวณยอดรวมและจำนวนผู้ชำระ
+        var msTotalRev = 0;
+        var msTotalPayers = new Set();
+        Object.keys(msData).forEach(function(cid) {
+            var cust = customers.find(function(c){ return c.id === cid; });
+            var fee = cust ? (Number(cust.fee) || 0) : 0;
+            Object.keys(msData[cid]).forEach(function(yr) {
+                if (currentAllYearFilter !== 'all' && yr !== currentAllYearFilter) return;
+                Object.keys(msData[cid][yr]).forEach(function(mk) {
+                    if (msData[cid][yr][mk] === 'paid') {
+                        msTotalRev += fee;
+                        msTotalPayers.add(cid);
+                    }
+                });
+            });
+        });
         document.getElementById('allCount').textContent = msTotalPayers.size;
         document.getElementById('allTotal').textContent = '฿' + formatMoney(msTotalRev);
     }
 
-    document.getElementById('allCash').textContent = '฿' + formatMoney(filteredAllPayments.filter(function(p){return p.method==='เงินสด';}).reduce(function(s,p){return s+p.amount;},0));
-    document.getElementById('allTransfer').textContent = '฿' + formatMoney(filteredAllPayments.filter(function(p){return p.method!=='เงินสด';}).reduce(function(s,p){return s+p.amount;},0));
+    document.getElementById('allCash').textContent = '฿' + formatMoney(activePayments.filter(function(p){return p.method==='เงินสด';}).reduce(function(s,p){return s+p.amount;},0));
+    document.getElementById('allTransfer').textContent = '฿' + formatMoney(activePayments.filter(function(p){return p.method!=='เงินสด';}).reduce(function(s,p){return s+p.amount;},0));
 
     var allRows = '';
     if (filteredAllPayments.length) {
@@ -224,12 +317,17 @@ function renderReports() {
             var rowClass = isCancelled ? ' class="text-decoration-line-through text-muted"' : '';
             var statusBadge = isCancelled ? ' <span class="badge bg-danger ms-1">ยกเลิกแล้ว</span>' : '';
 
+            var monthsStr = Array.isArray(p.months_paid) ? p.months_paid.join(', ') : (p.months_paid || '-');
+            var staffName = p.staff || '-';
+
             allRows += '<tr' + rowClass + '>' +
                 '<td class="ps-4 text-xs">' + p.date + ' ' + (p.time||'') + '</td>' +
                 '<td class="fw-semibold text-xs">' + p.receipt_no + statusBadge + '</td>' +
                 '<td>' + p.customer_name + '</td>' +
+                '<td class="text-xs">' + monthsStr + '</td>' +
                 '<td class="text-end fw-semibold ' + (isCancelled ? '' : 'text-success') + '">฿' + formatMoneyDecimal(p.amount) + '</td>' +
                 '<td class="text-xs">' + p.method + '</td>' +
+                '<td class="text-xs">' + staffName + '</td>' +
                 '<td class="pe-4 text-center">' +
                     '<button class="btn btn-xs btn-outline-info me-1" onclick="viewReceipt(\'' + p.id + '\')" title="ดูใบเสร็จ"><i class="fa-solid fa-eye"></i></button>' +
                     '<button class="btn btn-xs btn-outline-primary me-1" onclick="printReceiptA4(getWastePayments().find(function(x){return x.id===\'' + p.id + '\'}))" title="พิมพ์"><i class="fa-solid fa-print"></i></button>' +
@@ -342,6 +440,43 @@ function renderReports() {
         type:'bar', data:{labels:allYears, datasets:[{label:'รายรับ (บาท)',data:yearlyData,backgroundColor:'rgba(26,86,219,0.6)',borderRadius:8}]},
         options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:function(v){return '฿'+formatMoney(v);}}}}}
     });
+
+    // 4. Exemptions Report
+    var exStartDate = document.getElementById('exemptStartDate').value;
+    var exEndDate = document.getElementById('exemptEndDate').value;
+    var filteredExempt = exemptedPayments;
+
+    if (exStartDate || exEndDate) {
+        filteredExempt = exemptedPayments.filter(function(p) {
+            var pass = true;
+            if (exStartDate && p.date < exStartDate) pass = false;
+            if (exEndDate && p.date > exEndDate) pass = false;
+            return pass;
+        });
+    }
+
+    document.getElementById('exemptCount').textContent = filteredExempt.length;
+
+    var exRows = '';
+    if (filteredExempt.length) {
+        filteredExempt.forEach(function(p) {
+            var monthsArray = p.months_exempted || p.months_paid || [];
+            var monthsStr = Array.isArray(monthsArray) ? monthsArray.join(', ') : monthsArray;
+            exRows += '<tr>' +
+                '<td class="ps-4 text-xs">' + p.date + ' ' + (p.time||'') + '</td>' +
+                '<td><div class="fw-semibold">' + p.customer_name + '</div><div class="text-xs text-muted">' + p.house_no + '</div></td>' +
+                '<td>' + monthsStr + '</td>' +
+                '<td class="text-danger">' + (p.reject_reason || '-') + '</td>' +
+                '<td>' + (p.staff || '-') + '</td>' +
+                '<td class="pe-4 text-center">' +
+                    '<button class="btn btn-xs btn-outline-danger" onclick="promptCancelExemption(\'' + p.id + '\')" title="ยกเลิกการยกเว้น"><i class="fa-solid fa-times"></i> ยกเลิก</button>' +
+                '</td>' +
+                '</tr>';
+        });
+    } else {
+        exRows = '<tr><td colspan="6" class="text-center py-4 text-muted">ยังไม่มีรายการยกเว้นค่าธรรมเนียม</td></tr>';
+    }
+    document.getElementById('exemptTableBody').innerHTML = exRows;
 }
 
 // ============================================
@@ -395,7 +530,11 @@ async function promptDeletePayment(paymentId) {
     if (res.isConfirmed) {
         Swal.fire({title: 'กำลังลบข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
         try {
-            await deleteWastePayment(paymentId);
+            const success = await deleteWastePayment(paymentId);
+            if (!success) {
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่พบข้อมูลหรือลบข้อมูลไม่สำเร็จ', 'error');
+                return;
+            }
             // Refresh data
             await fetchWastePayments();
             await fetchMonthlyStatus();
@@ -404,6 +543,34 @@ async function promptDeletePayment(paymentId) {
         } catch (e) {
             console.error(e);
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถลบข้อมูลได้', 'error');
+        }
+    }
+}
+
+async function promptCancelExemption(exemptionId) {
+    const res = await Swal.fire({
+        title: 'ยกเลิกการยกเว้น?',
+        text: "เมื่อยกเลิกแล้ว เดือนดังกล่าวจะกลับไปเป็นสถานะที่สามารถชำระได้ปกติ (ค้างชำระ)",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'ยืนยันการยกเลิก',
+        cancelButtonText: 'ปิด'
+    });
+
+    if (res.isConfirmed) {
+        Swal.fire({title: 'กำลังดำเนินการ...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
+        try {
+            await cancelWasteExemptionDB(exemptionId);
+            // Refresh data
+            if (typeof fetchWasteExemptions !== 'undefined') await fetchWasteExemptions();
+            if (typeof fetchMonthlyStatus !== 'undefined') await fetchMonthlyStatus();
+            renderReports();
+            Swal.fire('สำเร็จ', 'ยกเลิกการยกเว้นเรียบร้อยแล้ว สถานะกลับสู่ปกติ', 'success');
+        } catch (e) {
+            console.error(e);
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถยกเลิกได้ กรุณาลองใหม่', 'error');
         }
     }
 }

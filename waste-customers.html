@@ -35,6 +35,10 @@
             </div>
         </div>
 
+        <!-- Moo Summary -->
+        <h6 class="fw-bold mb-3"><i class="fa-solid fa-chart-pie text-success me-2"></i>สรุปจำนวนครัวเรือนรายหมู่</h6>
+        <div class="row g-2 mb-4" id="mooSummaryDashboard"></div>
+
         <!-- Filters -->
         <div class="card mb-4">
             <div class="card-body py-3">
@@ -55,10 +59,10 @@
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead><tr>
-                            <th class="ps-4">รหัส</th><th>บ้านเลขที่</th><th>ชื่อเจ้าบ้าน</th><th>ประเภท</th><th>หมายเหตุ</th>
+                            <th class="ps-4">รหัส</th><th>บ้านเลขที่</th><th>หมู่</th><th>ชื่อเจ้าบ้าน</th><th>ประเภท</th><th>หมายเหตุ</th>
                             <th class="text-end">ค่าธรรมเนียม</th><th>เบอร์โทร</th><th>สถานะ</th><th class="pe-4 text-center">จัดการ</th>
                         </tr></thead>
-                        <tbody id="customerTableBody"><tr><td colspan="9" class="text-center py-4 text-muted">กำลังโหลด...</td></tr></tbody>
+                        <tbody id="customerTableBody"><tr><td colspan="10" class="text-center py-4 text-muted">กำลังโหลด...</td></tr></tbody>
                     </table>
                 </div>
                 <div class="card-body border-top py-3 d-flex justify-content-between align-items-center">
@@ -85,7 +89,7 @@
                         <div class="col-md-3">
                             <label class="form-label fw-semibold text-sm">ตำบล <span class="text-danger">*</span></label>
                             <select class="form-select" id="fSubdistrict" required>
-                                <option value="บ้านเป็ด">บ้านเป็ด</option>
+                                <option value="เหมืองหม้อ">เหมืองหม้อ</option>
                             </select>
                         </div>
                         <div class="col-md-6"><label class="form-label fw-semibold text-sm">ชื่อเจ้าบ้าน <span class="text-danger">*</span></label><input type="text" class="form-control" id="fName" required></div>
@@ -161,21 +165,39 @@ let modalMarker = null;
 
 document.addEventListener('DOMContentLoaded', async function() { 
     Swal.fire({title: 'กำลังโหลดข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading()});
-    initWasteData(); 
-    await fetchWasteFeeTypes();
-    await fetchWasteCustomers();
-    populateDropdowns();
-    renderTable(); 
-    Swal.close();
+    try {
+        initWasteData(); 
+        
+        // 1. Fetch fresh data
+        const fetchPromise = Promise.all([
+            fetchWasteFeeTypes(),
+            fetchWasteCustomers()
+        ]);
+        
+        // Wait for fresh data
+        await fetchPromise;
+        
+        // 2. Re-render once fresh data arrives
+        populateDropdowns();
+        renderTable();
+        
+        Swal.close();
+    } catch (e) {
+        console.error(e);
+        Swal.close();
+    }
 });
 
 function populateDropdowns() {
+    const customers = getWasteCustomers();
+    const moos = [...new Set(customers.map(c => Number(c.moo)).filter(m => !isNaN(m) && m > 0))].sort((a,b) => a - b);
     let mooOpts = '<option value="">ทุกหมู่</option>';
     let fMooOpts = '';
-    for(let i=1; i<=23; i++) {
-        mooOpts += `<option value="${i}">หมู่ ${i}</option>`;
-        fMooOpts += `<option value="${i}">หมู่ ${i}</option>`;
-    }
+    moos.forEach(m => {
+        mooOpts += `<option value="${m}">หมู่ ${m}</option>`;
+        fMooOpts += `<option value="${m}">หมู่ ${m}</option>`;
+    });
+    mooOpts += '<option value="none">ไม่ระบุหมู่/อื่นๆ</option>';
     document.getElementById('filterMoo').innerHTML = mooOpts;
     document.getElementById('fMoo').innerHTML = fMooOpts;
 
@@ -201,7 +223,16 @@ function getFiltered() {
     const feeFilter = document.getElementById('filterFee').value;
     
     if (q) data = data.filter(c => c.name.toLowerCase().includes(q) || c.house_no.includes(q) || (c.id_card||'').includes(q));
-    if (moo) data = data.filter(c => String(c.moo) === String(moo));
+    if (moo) {
+        if (moo === 'none') {
+            data = data.filter(c => {
+                const m = Number(c.moo);
+                return isNaN(m) || m <= 0 || !c.moo || String(c.moo).trim() === '-';
+            });
+        } else {
+            data = data.filter(c => String(c.moo) === String(moo));
+        }
+    }
     
     if (type) {
         if (type === 'none') {
@@ -241,7 +272,8 @@ function renderTable() {
     const tbody = document.getElementById('customerTableBody');
     tbody.innerHTML = pageData.length ? pageData.map(c => `<tr>
         <td class="ps-4 fw-semibold text-xs text-primary">${c.id}</td>
-        <td class="fw-bold">${c.house_no} ม.${c.moo}</td>
+        <td class="fw-bold">${c.house_no}</td>
+        <td class="text-center">${c.moo}</td>
         <td>${c.name}</td>
         <td>${typeBadge(c.type)}</td>
         <td class="text-muted text-xs" style="max-width: 150px;"><div class="text-truncate" title="${c.note||''}"><small>${c.note||'-'}</small></div></td>
@@ -259,7 +291,7 @@ function renderTable() {
             <button class="btn btn-xs btn-outline-danger me-1" onclick="deleteCustomer('${c.id}')" title="ลบ"><i class="fa-solid fa-trash"></i></button>
             ${c.lat?`<a href="waste-map.html?id=${c.id}" class="btn btn-xs btn-outline-info" title="แผนที่"><i class="fa-solid fa-map-location-dot"></i></a>`:''}
         </td>
-    </tr>`).join('') : '<tr><td colspan="9" class="text-center py-4 text-muted">ไม่พบข้อมูล</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="10" class="text-center py-4 text-muted">ไม่พบข้อมูล</td></tr>';
 
     // Pagination
     document.getElementById('pageInfo').textContent = data.length > 0 ? `แสดง ${start+1}-${Math.min(start+pageSize,data.length)} จาก ${data.length}` : 'แสดง 0-0 จาก 0';
@@ -279,6 +311,65 @@ function renderTable() {
         }
         pag.innerHTML += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}"><a class="page-link" href="#" onclick="goPage(${currentPage+1})">»</a></li>`;
     }
+    renderMooSummary();
+}
+
+function renderMooSummary() {
+    const data = getFiltered();
+    const counts = {};
+    let noneCount = 0;
+    
+    data.forEach(c => {
+        const m = Number(c.moo);
+        if (!isNaN(m) && m > 0) {
+            counts[m] = (counts[m] || 0) + 1;
+        } else {
+            noneCount++;
+        }
+    });
+    
+    const sortedMoos = Object.keys(counts).map(Number).sort((a,b) => a - b);
+    
+    const dashDiv = document.getElementById('mooSummaryDashboard');
+    if (!dashDiv) return;
+    
+    let html = '';
+    const total = data.length;
+    
+    sortedMoos.forEach(m => {
+        html += `
+        <div class="col-6 col-sm-4 col-md-3 col-xl-2">
+            <div class="card bg-white shadow-sm h-100" style="border: 1px solid #e2e8f0; border-top: 4px solid #3b82f6; border-radius: 6px;">
+                <div class="card-body py-2 px-3 text-center d-flex flex-column justify-content-center">
+                    <div class="fw-bold text-dark mb-1" style="font-size: 1.1rem; letter-spacing: 0.5px;">หมู่ที่ ${m}</div>
+                    <div class="fw-bold text-primary" style="font-size: 1.3rem;">${formatMoney(counts[m])} <span class="text-muted fw-normal" style="font-size: 0.8rem;">ครัวเรือน</span></div>
+                </div>
+            </div>
+        </div>`;
+    });
+    
+    if (noneCount > 0) {
+        html += `
+        <div class="col-6 col-sm-4 col-md-3 col-xl-2">
+            <div class="card bg-white shadow-sm h-100" style="border: 1px solid #e2e8f0; border-top: 4px solid #f59e0b; border-radius: 6px;">
+                <div class="card-body py-2 px-3 text-center d-flex flex-column justify-content-center">
+                    <div class="fw-bold text-dark mb-1" style="font-size: 1.1rem; letter-spacing: 0.5px;">ไม่ระบุหมู่</div>
+                    <div class="fw-bold text-warning" style="font-size: 1.3rem;">${formatMoney(noneCount)} <span class="text-muted fw-normal" style="font-size: 0.8rem;">ครัวเรือน</span></div>
+                </div>
+            </div>
+        </div>`;
+    }
+    
+    html = `
+        <div class="col-6 col-sm-4 col-md-3 col-xl-2">
+            <div class="card bg-primary text-white shadow-sm h-100" style="border: none; border-top: 4px solid #1e40af; border-radius: 6px;">
+                <div class="card-body py-2 px-3 text-center d-flex flex-column justify-content-center">
+                    <div class="fw-bold mb-1" style="font-size: 1.1rem; letter-spacing: 0.5px; opacity: 0.9;">รวมทั้งหมด</div>
+                    <div class="fw-bold" style="font-size: 1.4rem;">${formatMoney(total)} <span class="fw-normal" style="font-size: 0.8rem; opacity: 0.8;">ครัวเรือน</span></div>
+                </div>
+            </div>
+        </div>` + html;
+    dashDiv.innerHTML = html;
 }
 
 function goPage(p) { currentPage = p; renderTable(); }
@@ -311,7 +402,10 @@ function autoFee() {
 function initModalMap(lat, lng) {
     if (!modalMap) {
         modalMap = L.map('modalMap').setView([14.890, 102.020], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(modalMap);
+        L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { 
+            maxZoom: 20, 
+            attribution: '© Google' 
+        }).addTo(modalMap);
         modalMarker = L.marker([14.890, 102.020], {draggable: true}).addTo(modalMap);
         modalMarker.on('dragend', function(e) {
             const pos = modalMarker.getLatLng();
@@ -377,7 +471,7 @@ function editCustomer(id) {
     document.getElementById('fId').value = c.id;
     document.getElementById('fHouseNo').value = c.house_no;
     document.getElementById('fMoo').value = c.moo;
-    document.getElementById('fSubdistrict').value = c.subdistrict || 'บ้านเป็ด';
+    document.getElementById('fSubdistrict').value = c.subdistrict || 'เหมืองหม้อ';
     document.getElementById('fName').value = c.name;
     document.getElementById('fIdCard').value = c.id_card||'';
     document.getElementById('fPhone').value = c.phone||'';
@@ -396,19 +490,19 @@ async function saveCustomer(e) {
     const editId = document.getElementById('editId').value;
     const data = {
         id: document.getElementById('fId').value,
-        house_no: document.getElementById('fHouseNo').value,
-        moo: document.getElementById('fMoo').value,
-        subdistrict: document.getElementById('fSubdistrict').value,
-        name: document.getElementById('fName').value,
-        id_card: document.getElementById('fIdCard').value,
-        phone: document.getElementById('fPhone').value,
-        type: document.getElementById('fType').value,
-        fee: parseInt(document.getElementById('fFee').value)||40,
-        start_date: document.getElementById('fStartDate').value,
+        house_no: document.getElementById('fHouseNo').value || '-',
+        moo: document.getElementById('fMoo').value || '-',
+        subdistrict: document.getElementById('fSubdistrict').value || 'เหมืองหม้อ',
+        name: document.getElementById('fName').value || '-',
+        id_card: document.getElementById('fIdCard').value || null,
+        phone: document.getElementById('fPhone').value || null,
+        type: document.getElementById('fType').value || '-',
+        fee: parseInt(document.getElementById('fFee').value)||0,
+        start_date: document.getElementById('fStartDate').value || null,
         status: 'active',
         lat: parseFloat(document.getElementById('fLat').value)||null,
         lng: parseFloat(document.getElementById('fLng').value)||null,
-        note: document.getElementById('fNote').value
+        note: document.getElementById('fNote').value || null
     };
     
     if (editId) {
@@ -574,7 +668,7 @@ function exportToExcel() {
         "รหัสลูกค้า": c.id,
         "บ้านเลขที่": c.house_no,
         "หมู่": c.moo,
-        "ตำบล": c.subdistrict || 'บ้านเป็ด',
+        "ตำบล": c.subdistrict || 'เหมืองหม้อ',
         "ชื่อเจ้าบ้าน": c.name,
         "เลขบัตรประชาชน": c.id_card || '',
         "เบอร์โทร": c.phone || '',
@@ -638,7 +732,7 @@ function handleImportFile(e) {
                 let id = row["รหัสลูกค้า"] || row["รหัส"];
                 const hno = row["บ้านเลขที่"] ? String(row["บ้านเลขที่"]).trim() : '';
                 const moo = row["หมู่"] ? String(row["หมู่"]).trim() : '';
-                const subdistrict = row["ตำบล"] ? String(row["ตำบล"]).trim() : 'บ้านเป็ด';
+                const subdistrict = row["ตำบล"] ? String(row["ตำบล"]).trim() : 'เหมืองหม้อ';
                 const name = row["ชื่อเจ้าบ้าน"] ? String(row["ชื่อเจ้าบ้าน"]).trim() : '-';
                 
                 if (!hno || !moo) return; // Skip rows without required data (house_no, moo)

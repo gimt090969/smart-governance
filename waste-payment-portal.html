@@ -49,9 +49,19 @@
     <nav class="navbar navbar-expand-lg citizen-nav shadow-sm sticky-top">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-primary" href="#">
-                <img src="https://drive.google.com/thumbnail?id=1cPWRFVoN48eV6lJVS9E7nd2Mi7y5IQj8&sz=w200"
-                    height="36" alt="GOOD GOV" class="rounded">
-                <span class="d-none d-md-inline" style="font-size:0.95rem;">GOOD GOV</span>
+                <img id="public-org-logo" src="" alt="Organization Logo" style="max-height: 40px; max-width: 40px; width: auto; object-fit: contain;" class="rounded">
+                <script>
+                    try {
+                        const _ls = JSON.parse(localStorage.getItem('waste_settings'));
+                        document.getElementById('public-org-logo').src = (_ls && _ls.org_logo) ? _ls.org_logo : 'https://drive.google.com/thumbnail?id=1cPWRFVoN48eV6lJVS9E7nd2Mi7y5IQj8&sz=w200';
+                    } catch(e) {
+                        document.getElementById('public-org-logo').src = 'https://drive.google.com/thumbnail?id=1cPWRFVoN48eV6lJVS9E7nd2Mi7y5IQj8&sz=w200';
+                    }
+                </script>
+                <div class="d-flex flex-column">
+                    <span class="d-none d-md-inline" style="font-size:0.95rem; line-height:1.2;">GOOD GOV</span>
+                    <span id="public-org-name" class="d-none d-md-inline text-muted fw-semibold" style="font-size:0.7rem; line-height:1;"></span>
+                </div>
             </a>
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
                 data-bs-target="#citizenNav"><span class="navbar-toggler-icon"></span></button>
@@ -334,12 +344,66 @@
     <script src="assets/js/supabase-client.js"></script>
     <script>
         // ---- Check citizen session on load ----
-        (function () {
-            const session = LineAuth.getSession();
+        (async function () {
+            let session = LineAuth.getSession();
             if (!session || !session.lineUserId) {
                 window.location.href = 'index.html';
                 return;
             }
+
+            // Verify session with Supabase (force new registration if not in User_population)
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('User_population')
+                        .select('*')
+                        .eq('line_user_id', session.lineUserId)
+                        .maybeSingle();
+                    
+                    if (!data) {
+                        // Old data found but not in new Supabase table! Clear and force login
+                        LineAuth.clearSession();
+                        window.location.href = 'index.html';
+                        return;
+                    } else {
+                        // Update session with latest Supabase data
+                        session.firstName = data.first_name;
+                        session.lastName = data.last_name;
+                        session.fullName = data.full_name;
+                        session.houseNo = data.house_no;
+                        session.moo = data.moo;
+                        session.subdistrictName = data.subdistrict_name;
+                        session.lineAvatar = data.line_avatar;
+                        // Save updated session back to local storage
+                        LineAuth.createSession({
+                            lineUserId: data.line_user_id,
+                            lineName: data.line_name,
+                            lineAvatar: data.line_avatar,
+                            nationalId: data.national_id,
+                            title: data.title,
+                            firstName: data.first_name,
+                            lastName: data.last_name,
+                            fullName: data.full_name,
+                            houseNo: data.house_no,
+                            moo: data.moo,
+                            road: data.road,
+                            soi: data.soi,
+                            provinceId: data.province_id,
+                            provinceName: data.province_name,
+                            districtId: data.district_id,
+                            districtName: data.district_name,
+                            subdistrictId: data.subdistrict_id,
+                            subdistrictName: data.subdistrict_name,
+                            address: data.address,
+                            phone: data.phone,
+                            email: data.email
+                        });
+                    }
+                } catch (e) {
+                    console.error("Supabase session verification failed", e);
+                }
+            }
+
             // Populate user data across the page
             const name = session.firstName ? `${session.firstName} ${session.lastName}` : (session.fullName || session.lineName || 'ผู้ใช้งาน');
             const shortName = name.split(' ')[0];
@@ -359,6 +423,27 @@
             } else {
                 document.getElementById('navUserAvatar').src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(shortName) + '&background=06C755&color=fff&size=64';
             }
+
+            // Load settings for logo and org name
+            setTimeout(async () => {
+                let settings = null;
+                if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                    try {
+                        const { data } = await supabaseClient.from('waste_settings').select('org_name, org_logo').limit(1).single();
+                        if (data) settings = data;
+                    } catch (e) {}
+                }
+                if (!settings) {
+                    const local = localStorage.getItem('waste_settings');
+                    if (local) settings = JSON.parse(local);
+                }
+                if (settings) {
+                    const logoEl = document.getElementById('public-org-logo');
+                    const nameEl = document.getElementById('public-org-name');
+                    if (logoEl && settings.org_logo) logoEl.src = settings.org_logo;
+                    if (nameEl && settings.org_name) nameEl.textContent = settings.org_name;
+                }
+            }, 100);
         })();
 
         const THAI_MONTHS_SHORT = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
@@ -385,7 +470,7 @@
             try {
                 if (typeof supabaseClient !== 'undefined' && supabaseClient !== null) {
                     // Fetch Waste Payments
-                    let qWaste = supabaseClient.from('garbage_payment_transactions').select('*').order('payment_datetime', { ascending: false }).limit(10);
+                    let qWaste = supabaseClient.from('garbage_payment_transactions').select('*').limit(20);
                     if (session && session.houseNo && userName) {
                         qWaste = qWaste.or(`house_no.ilike."%${session.houseNo}%",payer_name.eq."${userName}"`);
                     } else if (session && session.houseNo) {
@@ -535,7 +620,7 @@
                     const sSubdistrict = session.subdistrictName ? session.subdistrictName.trim() : '';
                     const sName = session.firstName && session.lastName ? `${session.firstName} ${session.lastName}` : (session.fullName || session.lineName || '');
                     
-                    const TARGET_SUBDISTRICT = 'บ้านเป็ด';
+                    const TARGET_SUBDISTRICT = 'เหมืองหม้อ';
                     
                     if (sSubdistrict && sSubdistrict !== TARGET_SUBDISTRICT) {
                         // User is out of district
@@ -661,7 +746,7 @@
             let allRequests = [];
             try {
                 if (typeof supabaseClient !== 'undefined' && supabaseClient !== null) {
-                    let qWaste = supabaseClient.from('garbage_payment_transactions').select('*').order('payment_datetime', { ascending: false });
+                    let qWaste = supabaseClient.from('garbage_payment_transactions').select('*');
                     if (session && session.houseNo && userName) {
                         qWaste = qWaste.or(`house_no.ilike."%${session.houseNo}%",payer_name.eq."${userName}"`);
                     } else if (session && session.houseNo) {
