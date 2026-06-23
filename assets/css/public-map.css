@@ -96,8 +96,39 @@ body, html {
     left: 15px;
     right: 15px;
     z-index: 1000;
-    border-radius: 12px;
+    border-radius: 22px;
     padding: 2px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.search-overlay.collapsed {
+    right: auto;
+    width: 44px; /* Just enough for the icon */
+    background: rgba(15, 23, 42, 0.8) !important;
+}
+
+.search-overlay.collapsed .search-input-field,
+.search-overlay.collapsed .search-action-btn {
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    padding: 0;
+}
+
+.search-input-field {
+    transition: opacity 0.3s ease, width 0.3s ease;
+}
+
+.input-group-text.cursor-pointer {
+    cursor: pointer;
+    transition: transform 0.2s;
+    width: 40px;
+    justify-content: center;
+}
+
+.input-group-text.cursor-pointer:hover {
+    transform: scale(1.1);
 }
 
 @media (min-width: 768px) {
@@ -177,6 +208,25 @@ body, html {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
+    transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    max-height: 500px;
+    opacity: 1;
+    overflow: hidden;
+}
+
+.bottom-sheet.collapsed .layer-grid {
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+@media (min-width: 768px) {
+    .bottom-sheet.collapsed {
+        padding-bottom: 0 !important;
+    }
+    .bottom-sheet.collapsed .layer-grid {
+        margin-bottom: 15px; /* keep some spacing when collapsed */
+    }
 }
 
 @media (max-width: 380px) {

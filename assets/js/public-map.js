@@ -40,6 +40,40 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => splash.style.display = 'none', 500);
         }, 800);
     });
+    // Toggle Layer Grid
+    document.getElementById('toggleLayerGridBtn').addEventListener('click', function() {
+        const sheet = document.querySelector('.bottom-sheet');
+        sheet.classList.toggle('collapsed');
+        const icon = this.querySelector('i');
+        if (sheet.classList.contains('collapsed')) {
+            icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        } else {
+            icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+        }
+    });
+
+
+    // Search Bar Toggle
+    document.getElementById('searchToggleBtn').addEventListener('click', function(e) {
+        e.stopPropagation();
+        const searchOverlay = document.getElementById('searchOverlay');
+        const searchInput = document.getElementById('searchInput');
+        searchOverlay.classList.toggle('collapsed');
+        if (!searchOverlay.classList.contains('collapsed')) {
+            setTimeout(() => searchInput.focus(), 300);
+        }
+    });
+
+    // Close Search Bar on click outside
+    document.addEventListener('click', function(e) {
+        const searchOverlay = document.getElementById('searchOverlay');
+        if (searchOverlay && !searchOverlay.contains(e.target) && !searchOverlay.classList.contains('collapsed')) {
+            const searchInput = document.getElementById('searchInput');
+            if (searchInput && searchInput.value.trim() === '') {
+                searchOverlay.classList.add('collapsed');
+            }
+        }
+    });
 
     // Setup bottom sheet buttons
     document.querySelectorAll('.layer-btn').forEach(btn => {
