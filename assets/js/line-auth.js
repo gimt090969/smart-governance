@@ -23,8 +23,8 @@ const LineAuth = (() => {
     // Replace these with your real LINE Login Channel credentials
     // =======================================
     const CONFIG = {
-        CHANNEL_ID: '2010346499',                    // ← Replace with your LINE Login Channel ID
-        CHANNEL_SECRET: 'f6507ee7ad88069a100c450e7c419265',                          // ← นำ Channel Secret ของ LINE มาวางตรงนี้ (ถ้าไม่ใช้ Edge Function)
+        CHANNEL_ID: '2009933819',                    // ← Replace with your LINE Login Channel ID
+        CHANNEL_SECRET: '0238be5aeae629b16ec9301c7cbc27dd',                          // ← นำ Channel Secret ของ LINE มาวางตรงนี้ (ถ้าไม่ใช้ Edge Function)
         REDIRECT_URI: window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'index.html',
         SCOPE: 'profile openid email',
         STATE_KEY: 'sgov_line_state',

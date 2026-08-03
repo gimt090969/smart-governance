@@ -220,12 +220,51 @@ async function loadPublicData() {
                 ], style);
             } else { return; }
 
-            polyline.bindPopup(buildInfraPopupHTML(r.road_type === 'ถนนในแผนพัฒนา' ? 'ถนนในแผนพัฒนา' : 'ถนนสายทาง', r.road_id, `
+            const popupHtml = buildInfraPopupHTML(r.road_type === 'ถนนในแผนพัฒนา' ? 'ถนนในแผนพัฒนา' : 'ถนนสายทาง', r.road_id, `
                 <b>ชื่อถนน:</b> ${r.road_name || '-'}<br>
                 <b>ประเภทผิวจราจร:</b> ${r.surface_type || '-'}<br>
                 <b>กว้างเฉลี่ย:</b> ${r.width} ม. · <b>ยาว:</b> ${(r.length_m || 0).toLocaleString()} ม.<br>
                 <b>งบประมาณ/แหล่งที่มา:</b> ${r.budget_source || '-'}
-            `), { className: 'public-popup' });
+                <div id="mini-map-${r.id}" style="height: 140px; width: 100%; margin-top: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #0f172a; overflow: hidden; position: relative;"></div>
+            `);
+            polyline.bindPopup(popupHtml, { className: 'public-popup', minWidth: 260 });
+            
+            // Render mini map when popup opens
+            polyline.on('popupopen', function() {
+                setTimeout(() => {
+                    const mapId = 'mini-map-' + r.id;
+                    const container = document.getElementById(mapId);
+                    if (container && !container._leaflet_id) {
+                        const miniMap = L.map(container, {
+                            zoomControl: false,
+                            attributionControl: false,
+                            dragging: false,
+                            touchZoom: false,
+                            scrollWheelZoom: false,
+                            doubleClickZoom: false,
+                            boxZoom: false
+                        });
+                        
+                        L.tileLayer('http://mt0.google.com/vt/lyrs=y&hl=th&x={x}&y={y}&z={z}', {
+                            maxZoom: 20
+                        }).addTo(miniMap);
+                        
+                        const miniLine = L.polyline(polyline.getLatLngs(), { color: '#8b5cf6', weight: 4 }).addTo(miniMap);
+                        
+                        const latlngs = polyline.getLatLngs();
+                        if (latlngs && latlngs.length > 0) {
+                            // Leaflet can return array of latlngs or array of arrays for multi-polylines
+                            const pts = (Array.isArray(latlngs[0]) && latlngs[0].lat === undefined) ? latlngs[0] : latlngs;
+                            if (pts.length >= 2) {
+                                L.circleMarker(pts[0], { radius: 4, color: '#ef4444', fillColor: 'white', fillOpacity: 1, weight: 2 }).addTo(miniMap); // Red Start
+                                L.circleMarker(pts[pts.length - 1], { radius: 4, color: '#10b981', fillColor: 'white', fillOpacity: 1, weight: 2 }).addTo(miniMap); // Green End
+                            }
+                        }
+                        
+                        miniMap.fitBounds(miniLine.getBounds(), { padding: [15, 15], maxZoom: 18 });
+                    }
+                }, 100);
+            });
             
             // Add permanent tooltip for road details
             if (r.road_name) {
