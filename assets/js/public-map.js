@@ -45,10 +45,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const sheet = document.querySelector('.bottom-sheet');
         sheet.classList.toggle('collapsed');
         const icon = this.querySelector('i');
+        const textSpan = document.getElementById('toggleLayerGridText');
         if (sheet.classList.contains('collapsed')) {
             icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            if (textSpan) textSpan.innerText = 'ขยายแถบแสดงข้อมูล';
         } else {
             icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+            if (textSpan) textSpan.innerText = 'ย่อแถบแสดงข้อมูล';
         }
     });
 
