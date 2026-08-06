@@ -35,11 +35,22 @@
         <!-- Search & Filter -->
         <div class="card mb-3">
             <div class="card-body py-2">
-                <div class="row g-2 align-items-center">
+                <div class="row g-2 align-items-center mb-2">
                     <div class="col-md-5"><div class="input-group input-group-sm"><span class="input-group-text bg-light"><i class="fa-solid fa-search text-muted"></i></span><input type="text" class="form-control" id="searchInput" placeholder="ค้นหาบ้านเลขที่ / ชื่อ / นามสกุล / เลขบัตร..." onkeyup="filterTable()"></div></div>
                     <div class="col-md-3"><select class="form-select form-select-sm" id="filterVillage" onchange="filterTable()"><option value="">ทุกหมู่บ้าน</option><option value="1">หมู่ 1</option><option value="2">หมู่ 2</option><option value="3">หมู่ 3</option><option value="4">หมู่ 4</option><option value="5">หมู่ 5</option><option value="6">หมู่ 6</option><option value="7">หมู่ 7</option><option value="8">หมู่ 8</option><option value="9">หมู่ 9</option><option value="10">หมู่ 10</option><option value="11">หมู่ 11</option></select></div>
                     <div class="col-md-2"><select class="form-select form-select-sm" id="filterStatus" onchange="filterTable()"><option value="">ทั้งหมด</option><option value="poor">ด้อยโอกาส (ยากจน)</option></select></div>
                     <div class="col-md-2 text-end"><span class="text-xs text-muted" id="resultCount">—</span></div>
+                </div>
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-5">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light" style="font-size: 0.8rem;"><i class="fa-solid fa-filter text-muted me-1"></i>ช่วงอายุ</span>
+                            <input type="number" class="form-control" id="minAge" placeholder="อายุขั้นต่ำ" min="0" onkeyup="filterTable()" onchange="filterTable()">
+                            <span class="input-group-text bg-light">-</span>
+                            <input type="number" class="form-control" id="maxAge" placeholder="อายุสูงสุด" min="0" onkeyup="filterTable()" onchange="filterTable()">
+                            <span class="input-group-text bg-light" style="font-size: 0.8rem;">ปี</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -140,6 +151,9 @@ function filterTable(){
     const q=document.getElementById('searchInput').value.toLowerCase();
     const v=document.getElementById('filterVillage').value;
     const s=document.getElementById('filterStatus').value;
+    const minAgeStr = document.getElementById('minAge').value;
+    const maxAgeStr = document.getElementById('maxAge').value;
+    
     let d=populationData;
     if(q) d=d.filter(m=>{
         const name = `${m.prefix||''}${m.first_name||''} ${m.last_name||''}`.toLowerCase();
@@ -148,6 +162,16 @@ function filterTable(){
     });
     if(v) d=d.filter(m=>m.dd_households && String(m.dd_households.village_no)===v);
     if(s==='poor') d=d.filter(m=>m.dd_households && m.dd_households.poverty_status);
+    
+    if (minAgeStr !== '') {
+        const minAge = parseInt(minAgeStr);
+        d = d.filter(m => m.age !== null && m.age >= minAge);
+    }
+    if (maxAgeStr !== '') {
+        const maxAge = parseInt(maxAgeStr);
+        d = d.filter(m => m.age !== null && m.age <= maxAge);
+    }
+    
     renderTable(d);
 }
 

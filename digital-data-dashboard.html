@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/responsive.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
     <style>
         .dd-hero{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#1a56db 100%);border-radius:16px;padding:2rem;color:#fff;position:relative;overflow:hidden;margin-bottom:1.5rem}
         .dd-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,0.04)}
@@ -169,18 +170,56 @@ async function refreshDashboard(){
     const maleData=labels.map(k=>a.ageDistribution[k].m);
     const femaleData=labels.map(k=>a.ageDistribution[k].f);
 
+    Chart.register(ChartDataLabels);
+
     if(window._pyramidChart) window._pyramidChart.destroy();
     window._pyramidChart=new Chart(document.getElementById('pyramidChart'),{
         type:'bar',data:{labels,datasets:[
-            {label:'ชาย',data:maleData.map(v=>-v),backgroundColor:'rgba(59,130,246,0.7)',borderRadius:4,borderSkipped:false},
-            {label:'หญิง',data:femaleData,backgroundColor:'rgba(236,72,153,0.7)',borderRadius:4,borderSkipped:false}
-        ]},options:{indexAxis:'y',responsive:true,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${fmt(Math.abs(ctx.raw))} คน`}}},scales:{x:{ticks:{callback:v=>fmt(Math.abs(v))}},y:{stacked:true}}}
+            {label:'ชาย',data:maleData.map(v=>-v),backgroundColor:'rgba(59,130,246,0.8)',borderRadius:4,borderSkipped:false},
+            {label:'หญิง',data:femaleData,backgroundColor:'rgba(236,72,153,0.8)',borderRadius:4,borderSkipped:false}
+        ]},options:{
+            indexAxis:'y',
+            responsive:true,
+            plugins:{
+                legend:{position:'bottom'},
+                tooltip:{
+                    callbacks:{
+                        label:ctx=>`${ctx.dataset.label}: ${fmt(Math.abs(ctx.raw))} คน`,
+                        afterLabel:ctx=>{
+                            const idx = ctx.dataIndex;
+                            const total = maleData[idx] + femaleData[idx];
+                            return `รวมชายหญิง (ช่วงอายุนี้): ${fmt(total)} คน`;
+                        }
+                    }
+                },
+                datalabels: {
+                    color: '#ffffff',
+                    font: { weight: 'bold', size: 11 },
+                    formatter: (value) => {
+                        const val = Math.abs(value);
+                        return val > 0 ? fmt(val) : '';
+                    }
+                }
+            },
+            scales:{x:{ticks:{callback:v=>fmt(Math.abs(v))}},y:{stacked:true}}
+        }
     });
 
     if(window._genderChart) window._genderChart.destroy();
     window._genderChart=new Chart(document.getElementById('genderChart'),{
         type:'doughnut',data:{labels:['ชาย','หญิง'],datasets:[{data:[s.totalMale,s.totalFemale],backgroundColor:['#3b82f6','#ec4899'],borderWidth:0}]},
-        options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom'}}}
+        options:{
+            responsive:true,
+            cutout:'60%',
+            plugins:{
+                legend:{position:'bottom'},
+                datalabels: {
+                    color: '#ffffff',
+                    font: { weight: 'bold', size: 14 },
+                    formatter: (value) => value > 0 ? fmt(value) : ''
+                }
+            }
+        }
     });
 }
 document.addEventListener('DOMContentLoaded',()=>refreshDashboard());
