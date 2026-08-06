@@ -51,6 +51,7 @@ const NAV_ITEMS = [
     { href: 'digital-infrastructure-dashboard.html', icon: 'fa-solid fa-server', label: 'Digital Infrastructure', key: 'digital-infrastructure-dashboard', depts: ['กองช่าง'], parent: 'publicworks' },
     { href: 'digital-infrastructure-map.html', icon: 'fa-solid fa-map-location-dot', label: 'แผนที่โครงสร้างพื้นฐาน', key: 'digital-infrastructure-map', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
     { href: 'digital-infrastructure-roads.html', icon: 'fa-solid fa-road', label: 'ทะเบียนถนนและโครงข่าย', key: 'digital-infrastructure-roads', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
+    { href: 'digital-infrastructure-signs.html', icon: 'fa-solid fa-signs-post', label: 'ป้ายซอย', key: 'digital-infrastructure-signs', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
     { href: 'digital-infrastructure-water.html', icon: 'fa-solid fa-droplet', label: 'แหล่งน้ำและเส้นทางน้ำ', key: 'digital-infrastructure-water', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
     { href: 'digital-infrastructure-public-land.html', icon: 'fa-solid fa-tree', label: 'ที่สาธารณประโยชน์', key: 'digital-infrastructure-public-land', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
     { href: 'digital-infrastructure-boundary.html', icon: 'fa-solid fa-draw-polygon', label: 'แนวเขตและหลักเขต', key: 'digital-infrastructure-boundary', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },

@@ -7,7 +7,20 @@ let layers = {
     water: L.featureGroup(),
     waterways: L.featureGroup(),
     drainage: L.featureGroup(),
-    lighting: L.featureGroup(),
+    lighting: L.markerClusterGroup({
+        chunkedLoading: true,
+        maxClusterRadius: 50,
+        disableClusteringAtZoom: 18,
+        spiderfyOnMaxZoom: false,
+        iconCreateFunction: function(cluster) {
+            const count = cluster.getChildCount();
+            return L.divIcon({
+                html: `<div style="background-color: rgba(234, 179, 8, 0.95); color: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid rgba(255,255,255,0.8); font-weight: bold; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);"><i class="fa-solid fa-lightbulb" style="position:absolute; opacity:0.2; font-size: 24px;"></i><span style="position:relative; z-index:1;">${count}</span></div>`,
+                className: 'custom-cluster-icon',
+                iconSize: [40, 40]
+            });
+        }
+    }),
     publicLand: L.featureGroup(),
     boundarySubdistrict: L.featureGroup(),
     boundaryVillage: L.featureGroup(),
@@ -272,7 +285,7 @@ async function loadPublicData() {
             // Add permanent tooltip for road details
             if (r.road_name) {
                 const tooltipHtml = `
-                    <div style="text-align: center; line-height: 1.2;">
+                    <div style="text-align: center; line-height: 1.2; cursor: pointer;">
                         <div style="font-weight: 600; font-size: 0.75rem; color: #0f172a;">${r.road_name}</div>
                         <div style="font-size: 0.65rem; color: #475569; margin-top: 2px;">
                             ${r.surface_type || 'ไม่ระบุ'} • ${(r.length_m || 0).toLocaleString()} ม.
@@ -282,7 +295,8 @@ async function loadPublicData() {
                 polyline.bindTooltip(tooltipHtml, {
                     permanent: true,
                     direction: 'center',
-                    className: 'road-label-tooltip'
+                    className: 'road-label-tooltip',
+                    interactive: true
                 });
             }
             
@@ -349,7 +363,13 @@ async function loadPublicData() {
             if (!error && poles) {
                 poles.forEach(p => {
                     if (!p.lat || !p.lng || (p.lat === 0 && p.lng === 0)) return;
-                    const circle = L.circleMarker([p.lat, p.lng], DigitalInfraService.LAYER_STYLES.lighting);
+                    const lightingIcon = L.divIcon({
+                        className: 'custom-lighting-marker',
+                        html: `<div style="color: #fde047; font-size: 16px; text-shadow: 0 0 5px rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-lightbulb"></i></div>`,
+                        iconSize: [16, 16],
+                        iconAnchor: [8, 8]
+                    });
+                    const circle = L.marker([p.lat, p.lng], { icon: lightingIcon });
                     circle.pole_code = p.pole_code;
                     circle.light_type = p.light_type;
                     circle.bindPopup(buildInfraPopupHTML('เสาไฟฟ้าส่องสว่าง', p.pole_code, `<b>ประเภทโคม:</b> ${p.light_type || '-'}<br><b>สถานะ:</b> ${p.status === 'broken' ? 'ชำรุด' : 'ปกติ'}`), { className: 'public-popup' });

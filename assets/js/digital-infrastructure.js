@@ -51,7 +51,7 @@ const DigitalInfraService = {
         
         return {
             color: color,
-            weight: 5,
+            weight: 10,
             opacity: 0.9,
             lineCap: 'round',
             lineJoin: 'round'
