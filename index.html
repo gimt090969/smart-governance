@@ -453,17 +453,6 @@
                         </div>
                     </div>
 
-                    <!-- Public Map CTA -->
-                    <div class="mt-4 pt-3 d-flex justify-content-center">
-                        <a href="public-map.html" target="_blank" class="btn btn-primary d-flex align-items-center gap-3 py-3 px-4 shadow-lg w-100" style="border-radius: 16px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 1px solid rgba(255,255,255,0.2); transition: transform 0.2s; text-decoration: none;">
-                            <i class="fa-solid fa-map-location-dot" style="font-size: 1.8rem;"></i>
-                            <div class="text-start" style="line-height: 1.2;">
-                                <div class="fw-bold" style="font-size: 1.1rem; letter-spacing: 0.5px; color: white;">แผนที่เมืองอัจฉริยะ</div>
-                                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.8);">Smart City Map (สำหรับประชาชน)</div>
-                            </div>
-                            <i class="fa-solid fa-chevron-right ms-auto text-white"></i>
-                        </a>
-                    </div>
                 </div>
 
                 <!-- Login Card -->
@@ -490,17 +479,6 @@
                             <p style="color: rgba(255,255,255,0.6); font-size: 0.8rem; margin-bottom: 0;">เลือกประเภทผู้ใช้งานเพื่อเข้าสู่ระบบ</p>
                         </div>
 
-                        <!-- Public Map CTA (Mobile Visible) -->
-                        <div class="mb-4 d-lg-none">
-                            <a href="public-map.html" target="_blank" class="btn btn-primary d-flex align-items-center gap-3 py-3 px-3 shadow-sm w-100" style="border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); border: 1px solid rgba(255,255,255,0.2); transition: transform 0.2s; text-decoration: none;">
-                                <i class="fa-solid fa-map-location-dot" style="font-size: 1.5rem; color: white;"></i>
-                                <div class="text-start" style="line-height: 1.2;">
-                                    <div class="fw-bold" style="font-size: 1rem; letter-spacing: 0.5px; color: white;">แผนที่เมืองอัจฉริยะ (สำหรับประชาชน)</div>
-                                    <div style="font-size: 0.7rem; color: rgba(255,255,255,0.9);">เข้าดูข้อมูลสาธารณะโดยไม่ต้องเข้าสู่ระบบ</div>
-                                </div>
-                                <i class="fa-solid fa-chevron-right ms-auto text-white"></i>
-                            </a>
-                        </div>
 
                         <!-- Nav Tabs -->
                         <ul class="nav nav-pills nav-fill custom-tabs" id="loginTabs" role="tablist">
@@ -525,16 +503,32 @@
                             <!-- Citizen Tab -->
                             <div class="tab-pane fade show active" id="citizen" role="tabpanel"
                                 aria-labelledby="citizen-tab">
-                                <div class="text-center mb-4 mt-2">
-                                    <p style="color: rgba(255,255,255,0.7); font-size: 0.85rem;">
+                                
+                                <!-- Public Map CTA -->
+                                <div class="mb-4">
+                                    <a href="public-map.html" target="_blank" class="btn btn-primary d-flex align-items-center gap-3 py-3 px-3 shadow-sm w-100" style="border-radius: 12px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border: 1px solid rgba(255,255,255,0.2); transition: transform 0.2s; text-decoration: none;">
+                                        <i class="fa-solid fa-map-location-dot" style="font-size: 1.5rem; color: white;"></i>
+                                        <div class="text-start" style="line-height: 1.2;">
+                                            <div class="fw-bold" style="font-size: 1rem; letter-spacing: 0.5px; color: white;">แผนที่เมืองอัจฉริยะ</div>
+                                            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.8);">Smart City Map (สำหรับประชาชน)</div>
+                                        </div>
+                                        <i class="fa-solid fa-chevron-right ms-auto text-white"></i>
+                                    </a>
+                                </div>
+
+                                <div class="divider-text mb-4">หรือ</div>
+
+                                <div class="text-center mb-4">
+                                    <p style="color: rgba(255,255,255,0.7); font-size: 0.85rem; margin-bottom: 0;">
                                         เข้าถึงบริการภาครัฐออนไลน์</p>
                                 </div>
 
                                 <div class="mb-3 text-start">
                                     <label class="form-label" style="font-size: 0.85rem; color: rgba(255,255,255,0.8);">เลือกระบบที่ต้องการเข้าใช้งาน</label>
                                     <select class="form-select form-select-sm" id="citizenSystemSelect" style="background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); color: white; padding-top: 0.5rem; padding-bottom: 0.5rem;">
-                                        <option value="" disabled selected class="text-dark">ยังไม่เปิดการใช้งาน</option>
-                                        <!-- <option value="waste" class="text-dark">ระบบชำระค่าขยะ (Waste Collection Payment System)</option> -->
+                                        <option value="" disabled selected class="text-dark">กรุณาเลือกระบบ...</option>
+                                        <option value="eservice" class="text-dark">ระบบบริการประชาชน (Citizen Portal)</option>
+                                        <option value="waste" class="text-dark">ระบบชำระค่าขยะ (Waste Collection Payment System)</option>
                                     </select>
                                 </div>
 
