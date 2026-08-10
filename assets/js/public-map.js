@@ -1,31 +1,7 @@
 // public-map.js - Logic for Public GIS Portal (National Agency Edition)
 
 let map;
-let layers = {
-    roads: L.featureGroup(),
-    plannedRoads: L.featureGroup(),
-    water: L.featureGroup(),
-    waterways: L.featureGroup(),
-    drainage: L.featureGroup(),
-    lighting: L.markerClusterGroup({
-        chunkedLoading: true,
-        maxClusterRadius: 50,
-        disableClusteringAtZoom: 18,
-        spiderfyOnMaxZoom: false,
-        iconCreateFunction: function(cluster) {
-            const count = cluster.getChildCount();
-            return L.divIcon({
-                html: `<div style="background-color: rgba(234, 179, 8, 0.95); color: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid rgba(255,255,255,0.8); font-weight: bold; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);"><i class="fa-solid fa-lightbulb" style="position:absolute; opacity:0.2; font-size: 24px;"></i><span style="position:relative; z-index:1;">${count}</span></div>`,
-                className: 'custom-cluster-icon',
-                iconSize: [40, 40]
-            });
-        }
-    }),
-    publicLand: L.featureGroup(),
-    boundarySubdistrict: L.featureGroup(),
-    boundaryVillage: L.featureGroup(),
-    boundaryMarker: L.featureGroup()
-};
+let layers = {};
 
 let activeLayers = {
     roads: false,
@@ -35,6 +11,7 @@ let activeLayers = {
     drainage: false,
     lighting: false,
     publicLand: false,
+    waterMeter: false,
     boundarySubdistrict: true,
     boundaryVillage: false,
     boundaryMarker: false
@@ -44,13 +21,64 @@ let userMarker = null;
 let userCircle = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    initMap();
-    loadPublicData().then(() => {
-        // Hide splash screen after data is loaded and fitBounds is called
+    try {
+        layers = {
+            roads: L.featureGroup(),
+            plannedRoads: L.featureGroup(),
+            water: L.featureGroup(),
+            waterways: L.featureGroup(),
+            drainage: L.featureGroup(),
+            lighting: (typeof L.markerClusterGroup === 'function') ? L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 50,
+                disableClusteringAtZoom: 18,
+                spiderfyOnMaxZoom: false,
+                iconCreateFunction: function(cluster) {
+                    const count = cluster.getChildCount();
+                    return L.divIcon({
+                        html: `<div style="background-color: rgba(234, 179, 8, 0.95); color: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid rgba(255,255,255,0.8); font-weight: bold; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);"><i class="fa-solid fa-lightbulb" style="position:absolute; opacity:0.2; font-size: 24px;"></i><span style="position:relative; z-index:1;">${count}</span></div>`,
+                        className: 'custom-cluster-icon',
+                        iconSize: [40, 40]
+                    });
+                }
+            }) : L.featureGroup(),
+            publicLand: L.featureGroup(),
+            waterMeter: (typeof L.markerClusterGroup === 'function') ? L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 50,
+                disableClusteringAtZoom: 18,
+                spiderfyOnMaxZoom: false,
+                iconCreateFunction: function(cluster) {
+                    const count = cluster.getChildCount();
+                    return L.divIcon({
+                        html: `<div style="background-color: rgba(59, 130, 246, 0.95); color: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid rgba(255,255,255,0.8); font-weight: bold; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);"><i class="fa-solid fa-faucet-drip" style="position:absolute; opacity:0.2; font-size: 24px;"></i><span style="position:relative; z-index:1;">${count}</span></div>`,
+                        className: 'custom-cluster-icon',
+                        iconSize: [40, 40]
+                    });
+                }
+            }) : L.featureGroup(),
+            boundarySubdistrict: L.featureGroup(),
+            boundaryVillage: L.featureGroup(),
+            boundaryMarker: L.featureGroup()
+        };
+    } catch (e) {
+        console.error("Failed to initialize map layers:", e);
+    }
+    
+    try {
+        initMap();
+    } catch (e) {
+        console.error("Failed to init map:", e);
+    }
+
+    loadPublicData().finally(() => {
+        // Hide splash screen after data is loaded and fitBounds is called, or if it fails
         setTimeout(() => {
             const splash = document.getElementById('splashScreen');
-            splash.style.opacity = '0';
-            setTimeout(() => splash.style.display = 'none', 500);
+            if (splash) {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.style.display = 'none', 500);
+            }
         }, 800);
     });
     // Toggle Layer Grid
@@ -397,6 +425,32 @@ async function loadPublicData() {
             }
         });
 
+        // 6.5 Water Meters
+        const waterMeters = await DigitalInfraService.getWaterMeters();
+        let waterMeterCount = 0;
+        waterMeters.forEach(wm => {
+            if (wm.latitude && wm.longitude) {
+                waterMeterCount++;
+                const meterIcon = L.divIcon({
+                    className: 'custom-watermeter-marker',
+                    html: `<div style="background-color: #3b82f6; color: white; width: 26px; height: 26px; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 13px;"><i class="fa-solid fa-faucet-drip"></i></div>`,
+                    iconSize: [26, 26],
+                    iconAnchor: [13, 13]
+                });
+                const marker = L.marker([wm.latitude, wm.longitude], { icon: meterIcon });
+                let imgTag = wm.image_url ? `<div style="text-align:center;margin-top:5px;"><img src="${wm.image_url}" onclick="viewPublicImage('${wm.image_url}')" style="width:100%;max-height:100px;object-fit:cover;border-radius:5px;cursor:pointer;" title="คลิกเพื่อขยายภาพ"></div>` : '';
+                marker.bindPopup(buildInfraPopupHTML('มาตรน้ำประปา', wm.meter_code, `
+                    <b>บ้านเลขที่:</b> ${wm.house_number || '-'} หมู่ ${wm.village_no || '-'}<br>
+                    <b>เจ้าของ:</b> ${wm.owner_name || '-'}<br>
+                    <b>ผู้ดูแล:</b> ${wm.caretaker_name || '-'}
+                    ${imgTag}
+                `), { className: 'public-popup' });
+                layers.waterMeter.addLayer(marker);
+            }
+        });
+        const statWmEl = document.getElementById('stat-watermeter');
+        if (statWmEl) statWmEl.textContent = waterMeterCount.toLocaleString();
+
         // 7, 8, 9 Boundaries and Markers
         const dbBoundaries = await (typeof BoundarySpatialService !== 'undefined' ? BoundarySpatialService.loadBoundaries() : Promise.resolve([]));
         dbBoundaries.forEach(b => {
@@ -488,5 +542,17 @@ function locateUser() {
         });
     } else {
         alert('เบราว์เซอร์ของคุณไม่รองรับการระบุตำแหน่ง');
+    }
+}
+
+function viewPublicImage(url) {
+    const imgEl = document.getElementById('publicPreviewImageSrc');
+    if (imgEl) {
+        imgEl.src = url;
+        const modalEl = document.getElementById('publicImagePreviewModal');
+        if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        }
     }
 }

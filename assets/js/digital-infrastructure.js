@@ -14,6 +14,7 @@ const DigitalInfraService = {
     mockRepairs: [],
     mockPermits: [],
     mockProposals: [],
+    mockWaterMeters: [],
 
     // === LAYER COLORS ===
     LAYER_STYLES: {
@@ -133,6 +134,14 @@ const DigitalInfraService = {
         return this.mockRepairs;
     },
 
+    async getWaterMeters() {
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+            const { data, error } = await supabaseClient.from('infra_water_meters').select('*').order('created_at', { ascending: false });
+            if (!error && data) return data;
+        }
+        return this.mockWaterMeters;
+    },
+
     async getPermits() {
         if (typeof supabaseClient !== 'undefined' && supabaseClient) {
             const { data, error } = await supabaseClient.from('infra_permits').select('*').order('created_at', { ascending: false });
@@ -171,6 +180,42 @@ const DigitalInfraService = {
                 if (idx !== -1) this.mockRoads[idx] = road;
             }
             return road;
+        }
+    },
+
+    async saveWaterMeter(meter) {
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+            const isNew = !meter.id;
+            if (isNew) delete meter.id;
+            const action = isNew 
+                ? supabaseClient.from('infra_water_meters').insert([meter])
+                : supabaseClient.from('infra_water_meters').update(meter).eq('id', meter.id);
+            const { data, error } = await action.select();
+            if (error) throw error;
+            return data[0];
+        } else {
+            if (!meter.id) {
+                meter.id = String(this.mockWaterMeters.length + 1);
+                this.mockWaterMeters.push(meter);
+            } else {
+                const idx = this.mockWaterMeters.findIndex(m => m.id === meter.id);
+                if (idx !== -1) this.mockWaterMeters[idx] = meter;
+            }
+            return meter;
+        }
+    },
+
+    async deleteWaterMeter(id) {
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+            const { error } = await supabaseClient.from('infra_water_meters').delete().eq('id', id);
+            if (error) throw error;
+            return true;
+        } else {
+            const idx = this.mockWaterMeters.findIndex(m => m.id === id);
+            if (idx !== -1) {
+                this.mockWaterMeters.splice(idx, 1);
+            }
+            return true;
         }
     },
 
