@@ -88,6 +88,10 @@
                 <span><i class="fa-solid fa-building text-success me-1"></i> สถานที่ราชการ</span>
                 <span id="stat-publicland" class="font-bold">...</span>
             </div>
+            <div class="d-flex justify-content-between align-items-center text-white text-sm">
+                <span><i class="fa-solid fa-faucet-drip text-blue-400 me-1"></i> มาตรน้ำประปา</span>
+                <span id="stat-watermeter" class="font-bold">...</span>
+            </div>
         </div>
 
         <!-- Bottom Navigation / Layer Toggle -->
@@ -142,6 +146,24 @@
                     <i class="fa-solid fa-square text-success"></i>
                     <span>ที่ดินสาธารณะ</span>
                 </button>
+                <button class="layer-btn" data-layer="waterMeter">
+                    <i class="fa-solid fa-faucet-drip text-blue-400"></i>
+                    <span>มาตรน้ำประปา</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Image Preview -->
+    <div class="modal fade" id="publicImagePreviewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content bg-transparent border-0">
+                <div class="modal-header border-0 pb-0 text-end d-block">
+                    <button type="button" class="btn-close btn-close-white bg-dark p-2 rounded-circle" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0 text-center">
+                    <img id="publicPreviewImageSrc" src="" class="img-fluid rounded-xl shadow-lg" style="max-height: 85vh; object-fit: contain;">
+                </div>
             </div>
         </div>
     </div>
