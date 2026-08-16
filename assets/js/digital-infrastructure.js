@@ -32,6 +32,28 @@ const DigitalInfraService = {
      * คืนค่าสไตล์ของแนวเส้นทางถนนแบบไดนามิก จำแนกตามประเภทผิวจราจรและแผนพัฒนา
      * @param {Object} road ข้อมูลถนน
      */
+    getRoadSurfaceTypes() {
+        const stored = localStorage.getItem('diis_road_surfaces');
+        if (stored) {
+            try {
+                return JSON.parse(stored);
+            } catch (e) {
+                console.error("Failed to parse road surface types from localStorage", e);
+            }
+        }
+        // Default values
+        return [
+            { name: 'คอนกรีตเสริมเหล็ก', color: '#0ea5e9' },
+            { name: 'แอสฟัลต์ติก/ลาดยาง', color: '#10b981' },
+            { name: 'หินคลุก/ลูกรัง', color: '#f97316' },
+            { name: 'อื่นๆ', color: '#8b5cf6' }
+        ];
+    },
+
+    saveRoadSurfaceTypes(types) {
+        localStorage.setItem('diis_road_surfaces', JSON.stringify(types));
+    },
+
     getRoadStyle(road) {
         let color = '#3b82f6'; // สีน้ำเงินมาตรฐาน
         
@@ -39,14 +61,14 @@ const DigitalInfraService = {
             color = '#eab308'; // สีเหลืองสว่างพรีเมียม (Vibrant Golden Yellow)
         } else {
             const surface = road.surface_type || '';
-            if (surface.includes('คอนกรีตเสริมเหล็ก')) {
-                color = '#0ea5e9'; // สีฟ้าสว่าง (Bright Sky Blue)
-            } else if (surface.includes('แอสฟัลต์ติก') || surface.includes('ลาดยาง')) {
-                color = '#10b981'; // สีเขียวมรกต (Emerald Green)
-            } else if (surface.includes('หินคลุก') || surface.includes('ลูกรัง')) {
-                color = '#f97316'; // สีส้มแดงลูกรัง (Vibrant Laterite Orange)
+            const surfaceTypes = this.getRoadSurfaceTypes();
+            const matchedSurface = surfaceTypes.find(t => surface.includes(t.name) || t.name.includes(surface));
+            if (matchedSurface) {
+                color = matchedSurface.color;
             } else {
-                color = '#8b5cf6'; // สีม่วงสำหรับอื่นๆ (Purple)
+                // Fallback for unmapped custom names, try to find 'อื่นๆ'
+                const otherSurface = surfaceTypes.find(t => t.name === 'อื่นๆ');
+                color = otherSurface ? otherSurface.color : '#8b5cf6'; 
             }
         }
         
