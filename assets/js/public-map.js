@@ -400,7 +400,8 @@ async function loadPublicData() {
                     const circle = L.marker([p.lat, p.lng], { icon: lightingIcon });
                     circle.pole_code = p.pole_code;
                     circle.light_type = p.light_type;
-                    circle.bindPopup(buildInfraPopupHTML('เสาไฟฟ้าส่องสว่าง', p.pole_code, `<b>ประเภทโคม:</b> ${p.light_type || '-'}<br><b>สถานะ:</b> ${p.status === 'broken' ? 'ชำรุด' : 'ปกติ'}`), { className: 'public-popup' });
+                    const repairUrl = `citizen-services.html?autoOpen=electric&poleCode=${encodeURIComponent(p.pole_code || '')}`;
+                    circle.bindPopup(buildInfraPopupHTML('เสาไฟฟ้าส่องสว่าง', p.pole_code, `<b>ประเภทโคม:</b> ${p.light_type || '-'}<br><b>สถานะ:</b> ${p.status === 'broken' ? 'ชำรุด' : 'ปกติ'}<div class="mt-3"><a href="${repairUrl}" target="_blank" class="btn btn-sm btn-warning w-100 fw-bold shadow-sm" style="font-size: 0.8rem; border-radius: 6px; color: #1e293b;"><i class="fa-solid fa-wrench me-1"></i> แจ้งซ่อมไฟฟ้า</a></div>`), { className: 'public-popup' });
                     layers.lighting.addLayer(circle);
                 });
             }
