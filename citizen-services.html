@@ -476,9 +476,10 @@
             // Check autoOpen parameter
             const params = new URLSearchParams(window.location.search);
             if (params.get('autoOpen') === 'electric') {
+                const poleCode = params.get('poleCode');
                 // Add slight delay to ensure everything is rendered
                 setTimeout(() => {
-                    openElectricRepairForm();
+                    openElectricRepairForm(poleCode);
                 }, 300);
             }
         });
@@ -554,7 +555,7 @@
         const DEFAULT_LAT = 13.7563; // Bangkok fallback
         const DEFAULT_LNG = 100.5018;
 
-        function openElectricRepairForm() {
+        function openElectricRepairForm(poleCode = '') {
             // Auto-fill user data
             if (currentUser) {
                 document.getElementById('elecFullName').value = currentUser.fullName || '';
@@ -563,7 +564,7 @@
             }
 
             // Reset fields
-            document.getElementById('elecPoleId').value = '';
+            document.getElementById('elecPoleId').value = poleCode || '';
             document.getElementById('elecDamageCause').value = '';
             document.getElementById('elecDamageCauseOther').value = '';
             document.getElementById('elecDamageCauseOther').classList.add('d-none');

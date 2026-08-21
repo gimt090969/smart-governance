@@ -286,6 +286,33 @@
         }
     }
 
+    function panToMarker(id) {
+        const meter = allMeters.find(m => m.id === id);
+        if (meter && meter.latitude && meter.longitude && map) {
+            const lat = meter.latitude;
+            const lng = meter.longitude;
+            map.setView([lat, lng], 18);
+            
+            const popupContent = `
+                <div style="font-family:'Prompt',sans-serif;font-size:12px;">
+                    <h6 class="font-bold text-blue-600 border-b pb-1 mb-1">รหัสมาตร: ${meter.meter_code || '-'}</h6>
+                    <div><b>บ้านเลขที่:</b> ${meter.house_number || '-'} หมู่ ${meter.village_no || '-'}</div>
+                    <div><b>เจ้าของ:</b> ${meter.owner_name || '-'}</div>
+                    <div><b>ผู้ดูแล:</b> ${meter.caretaker_name || '-'}</div>
+                </div>
+            `;
+            
+            L.popup({ autoClose: true, closeOnClick: true, offset: [0, -5] })
+             .setLatLng([lat, lng])
+             .setContent(popupContent)
+             .openOn(map);
+
+            if (window.innerWidth < 1024) {
+                document.getElementById('meterMap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }
+
     function renderTable(data) {
         const tbody = document.getElementById('meterTableBody');
         if (!data || data.length === 0) {
@@ -293,25 +320,29 @@
             return;
         }
 
-        tbody.innerHTML = data.map(m => `
-            <tr>
+        tbody.innerHTML = data.map(m => {
+            const hasLocation = m.latitude && m.longitude;
+            const trClick = hasLocation ? `onclick="panToMarker('${m.id}')" style="cursor: pointer;" title="คลิกเพื่อดูตำแหน่งบนแผนที่"` : '';
+            return `
+            <tr ${trClick}>
                 <td class="font-semibold text-blue-600">${m.meter_code || '-'}</td>
                 <td>${m.house_number || '-'}</td>
                 <td>${m.village_no || '-'}</td>
                 <td>${m.owner_name || '-'}</td>
                 <td class="text-center">
-                    ${m.image_url ? `<img src="${m.image_url}" class="rounded cursor-pointer shadow-sm mx-auto" style="width: 40px; height: 40px; object-fit: cover;" onclick="viewImage('${m.image_url}')" title="คลิกเพื่อดูรูปขยายใหญ่">` : `<span class="text-slate-300"><i class="fa-solid fa-image"></i></span>`}
+                    ${m.image_url ? `<img src="${m.image_url}" class="rounded cursor-pointer shadow-sm mx-auto" style="width: 40px; height: 40px; object-fit: cover;" onclick="event.stopPropagation(); viewImage('${m.image_url}')" title="คลิกเพื่อดูรูปขยายใหญ่">` : `<span class="text-slate-300"><i class="fa-solid fa-image"></i></span>`}
                 </td>
                 <td>${m.caretaker_name || '-'}</td>
                 <td class="text-center">
-                    ${m.latitude && m.longitude ? `<span class="badge bg-emerald-100 text-emerald-700"><i class="fa-solid fa-check"></i></span>` : `<span class="badge bg-slate-100 text-slate-500">-</span>`}
+                    ${hasLocation ? `<span class="badge bg-emerald-100 text-emerald-700"><i class="fa-solid fa-check"></i></span>` : `<span class="badge bg-slate-100 text-slate-500">-</span>`}
                 </td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="editMeter('${m.id}')" title="แก้ไข"><i class="fa-solid fa-pen"></i></button>
-                    <button class="btn btn-sm btn-outline-danger py-0 px-2 ms-1" onclick="deleteMeter('${m.id}')" title="ลบ"><i class="fa-solid fa-trash"></i></button>
+                    <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="event.stopPropagation(); editMeter('${m.id}')" title="แก้ไข"><i class="fa-solid fa-pen"></i></button>
+                    <button class="btn btn-sm btn-outline-danger py-0 px-2 ms-1" onclick="event.stopPropagation(); deleteMeter('${m.id}')" title="ลบ"><i class="fa-solid fa-trash"></i></button>
                 </td>
             </tr>
-        `).join('');
+            `;
+        }).join('');
     }
 
     function renderMap(data) {
@@ -343,11 +374,28 @@
     }
 
     function filterMeters() {
-        const q = document.getElementById('searchMeter').value.toLowerCase();
+        const q = document.getElementById('searchMeter').value.trim();
+        if (!q) {
+            renderTable(allMeters);
+            return;
+        }
+
+        const isNumeric = /^\d+$/.test(q);
+        const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        
+        let regex;
+        if (isNumeric) {
+            regex = new RegExp(`(^|[^\\d])${q}([^\\d]|$)`, 'i');
+        } else {
+            regex = new RegExp(escapeRegExp(q), 'i');
+        }
+
         const filtered = allMeters.filter(m => 
-            (m.meter_code || '').toLowerCase().includes(q) ||
-            (m.house_number || '').toLowerCase().includes(q) ||
-            (m.owner_name || '').toLowerCase().includes(q)
+            regex.test(m.meter_code || '') ||
+            regex.test(m.house_number || '') ||
+            regex.test(m.owner_name || '') ||
+            regex.test(m.village_no || '') ||
+            (m.caretaker_name && regex.test(m.caretaker_name))
         );
         renderTable(filtered);
     }
