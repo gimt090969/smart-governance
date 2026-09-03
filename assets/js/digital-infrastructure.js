@@ -94,15 +94,17 @@ const DigitalInfraService = {
                     .maybeSingle();
                 
                 if (data) {
-                    await supabaseClient.from('sys_settings')
+                    const { error: updateError } = await supabaseClient.from('sys_settings')
                         .update({ setting_value: types, updated_at: new Date().toISOString() })
                         .eq('setting_key', 'diis_road_surfaces');
+                    if (updateError) console.error("Failed to update road surfaces in Supabase", updateError);
                 } else {
-                    await supabaseClient.from('sys_settings')
+                    const { error: insertError } = await supabaseClient.from('sys_settings')
                         .insert([{ setting_key: 'diis_road_surfaces', setting_value: types }]);
+                    if (insertError) console.error("Failed to insert road surfaces to Supabase", insertError);
                 }
             } catch(e) {
-                console.error("Failed to save road surfaces to Supabase", e);
+                console.error("Failed to save road surfaces to Supabase exception", e);
             }
         }
     },
