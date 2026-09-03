@@ -321,7 +321,8 @@
         boundarySubdistrict: true, boundaryVillage: true, boundaryMarker: true, repairs: true
     };
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+        await DigitalInfraService.loadRoadSurfaceTypesFromDB();
         initGISMap();
         loadGISLayers();
         initMapRoadLegend();
