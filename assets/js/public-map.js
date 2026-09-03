@@ -20,7 +20,10 @@ let activeLayers = {
 let userMarker = null;
 let userCircle = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof DigitalInfraService !== 'undefined' && typeof DigitalInfraService.loadRoadSurfaceTypesFromDB === 'function') {
+        await DigitalInfraService.loadRoadSurfaceTypesFromDB();
+    }
     try {
         layers = {
             roads: L.featureGroup(),

@@ -32,16 +32,47 @@ const DigitalInfraService = {
      * คืนค่าสไตล์ของแนวเส้นทางถนนแบบไดนามิก จำแนกตามประเภทผิวจราจรและแผนพัฒนา
      * @param {Object} road ข้อมูลถนน
      */
-    getRoadSurfaceTypes() {
+    cachedRoadSurfaces: null,
+
+    async loadRoadSurfaceTypesFromDB() {
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('sys_settings')
+                    .select('setting_value')
+                    .eq('setting_key', 'diis_road_surfaces')
+                    .maybeSingle();
+                
+                if (!error && data && data.setting_value) {
+                    this.cachedRoadSurfaces = data.setting_value;
+                    return this.cachedRoadSurfaces;
+                }
+            } catch(e) {
+                console.error("Failed to load road surfaces from Supabase", e);
+            }
+        }
+        
+        // Fallback or initialization if DB fetch fails or not configured
         const stored = localStorage.getItem('diis_road_surfaces');
         if (stored) {
             try {
-                return JSON.parse(stored);
-            } catch (e) {
-                console.error("Failed to parse road surface types from localStorage", e);
-            }
+                this.cachedRoadSurfaces = JSON.parse(stored);
+                return this.cachedRoadSurfaces;
+            } catch (e) {}
         }
-        // Default values
+        
+        this.cachedRoadSurfaces = [
+            { name: 'คอนกรีตเสริมเหล็ก', color: '#0ea5e9' },
+            { name: 'แอสฟัลต์ติก/ลาดยาง', color: '#10b981' },
+            { name: 'หินคลุก/ลูกรัง', color: '#f97316' },
+            { name: 'อื่นๆ', color: '#8b5cf6' },
+            { name: 'ถนนดิน', color: '#78350f' }
+        ];
+        return this.cachedRoadSurfaces;
+    },
+
+    getRoadSurfaceTypes() {
+        if (this.cachedRoadSurfaces) return this.cachedRoadSurfaces;
         return [
             { name: 'คอนกรีตเสริมเหล็ก', color: '#0ea5e9' },
             { name: 'แอสฟัลต์ติก/ลาดยาง', color: '#10b981' },
@@ -50,8 +81,30 @@ const DigitalInfraService = {
         ];
     },
 
-    saveRoadSurfaceTypes(types) {
-        localStorage.setItem('diis_road_surfaces', JSON.stringify(types));
+    async saveRoadSurfaceTypes(types) {
+        this.cachedRoadSurfaces = types;
+        localStorage.setItem('diis_road_surfaces', JSON.stringify(types)); // fallback
+        
+        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('sys_settings')
+                    .select('id')
+                    .eq('setting_key', 'diis_road_surfaces')
+                    .maybeSingle();
+                
+                if (data) {
+                    await supabaseClient.from('sys_settings')
+                        .update({ setting_value: types, updated_at: new Date().toISOString() })
+                        .eq('setting_key', 'diis_road_surfaces');
+                } else {
+                    await supabaseClient.from('sys_settings')
+                        .insert([{ setting_key: 'diis_road_surfaces', setting_value: types }]);
+                }
+            } catch(e) {
+                console.error("Failed to save road surfaces to Supabase", e);
+            }
+        }
     },
 
     getRoadStyle(road) {
