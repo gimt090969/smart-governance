@@ -381,22 +381,37 @@ body, html {
     pointer-events: none;
 }
 
-/* Pole Labels Tooltips (Zoom-dependent) */
-.leaflet-tooltip.pole-label-tooltip {
-    background: rgba(15, 23, 42, 0.9) !important;
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    border-radius: 6px !important;
-    color: #f8fafc !important; 
-    font-family: 'Prompt', sans-serif !important;
-    font-size: 0.75rem !important;
-    padding: 2px 6px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;
-    white-space: nowrap;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-    line-height: 1.2;
+/* Map Labels for High Zoom (Performance-friendly, CSS-only toggling) */
+#publicMap:not(.zoom-19-up) .marker-label-house {
+    display: none !important;
 }
 
-.leaflet-tooltip.pole-label-tooltip::before {
+#publicMap:not(.zoom-19-up) .marker-label-lighting {
     display: none !important;
+}
+
+.marker-label-house, .marker-label-lighting {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0px 0px 4px rgba(255,255,255,0.9);
+    font-family: 'Prompt', sans-serif;
+    font-weight: 700;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.marker-label-house {
+    top: -24px;
+    font-size: 0.85rem;
+    color: #0f172a; /* dark slate for better readability */
+    font-weight: 800;
+}
+
+.marker-label-lighting {
+    top: -20px;
+    font-size: 0.8rem;
+    color: #0f172a; /* dark slate */
+    font-weight: 800;
 }

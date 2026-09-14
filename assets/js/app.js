@@ -58,6 +58,7 @@ const NAV_ITEMS = [
     { href: 'digital-infrastructure-boundary.html', icon: 'fa-solid fa-draw-polygon', label: 'แนวเขตและหลักเขต', key: 'digital-infrastructure-boundary', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
     { href: 'digital-infrastructure-repairs.html', icon: 'fa-solid fa-wrench', label: 'ประวัติการซ่อมบำรุง', key: 'digital-infrastructure-repairs', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
     { href: 'digital-infrastructure-permits.html', icon: 'fa-solid fa-file-signature', label: 'E-Permit & ขอทุน', key: 'digital-infrastructure-permits', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
+    { href: 'digital-infrastructure-house-number.html', icon: 'fa-solid fa-house-chimney', label: 'บ้านเลขที่', key: 'digital-infrastructure-house-number', depts: ['กองช่าง'], parent: 'digital-infrastructure-dashboard' },
     { href: 'health.html', icon: 'fa-solid fa-leaf', label: 'กองสาธารณสุขฯ', key: 'health', depts: ['กองสาธารณสุขฯ'] },
     { href: 'healthcare-dashboard.html', icon: 'fa-solid fa-hand-holding-heart', label: 'ระบบดูแลกลุ่มเปราะบางและผู้ที่มีภาวะพึ่งพิง', key: 'ph-vulnerable', depts: ['กองสาธารณสุขฯ'], parent: 'health' },
     { href: 'healthcare-dashboard.html', icon: 'fa-solid fa-chart-pie', label: 'แดชบอร์ดผู้บริหาร', key: 'healthcare-dashboard', depts: ['กองสาธารณสุขฯ'], parent: 'ph-vulnerable' },

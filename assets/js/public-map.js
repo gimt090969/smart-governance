@@ -2,6 +2,7 @@
 
 let map;
 let layers = {};
+let houseNumbersData = [];
 
 let activeLayers = {
     roads: false,
@@ -12,6 +13,7 @@ let activeLayers = {
     lighting: false,
     publicLand: false,
     waterMeter: false,
+    houseNumbers: false,
     boundarySubdistrict: true,
     boundaryVillage: false,
     boundaryMarker: false
@@ -55,6 +57,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const count = cluster.getChildCount();
                     return L.divIcon({
                         html: `<div style="background-color: rgba(59, 130, 246, 0.95); color: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid rgba(255,255,255,0.8); font-weight: bold; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);"><i class="fa-solid fa-faucet-drip" style="position:absolute; opacity:0.2; font-size: 24px;"></i><span style="position:relative; z-index:1;">${count}</span></div>`,
+                        className: 'custom-cluster-icon',
+                        iconSize: [40, 40]
+                    });
+                }
+            }) : L.featureGroup(),
+            houseNumbers: (typeof L.markerClusterGroup === 'function') ? L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 50,
+                disableClusteringAtZoom: 18,
+                spiderfyOnMaxZoom: false,
+                iconCreateFunction: function(cluster) {
+                    const count = cluster.getChildCount();
+                    return L.divIcon({
+                        html: `<div style="background-color: rgba(249, 115, 22, 0.95); color: white; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid rgba(255,255,255,0.8); font-weight: bold; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);"><i class="fa-solid fa-house-chimney" style="position:absolute; opacity:0.2; font-size: 24px;"></i><span style="position:relative; z-index:1;">${count}</span></div>`,
                         className: 'custom-cluster-icon',
                         iconSize: [40, 40]
                     });
@@ -122,6 +138,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // Search input listener for House Numbers
+    const searchInputEl = document.getElementById('searchInput');
+    searchInputEl.addEventListener('input', function() {
+        if (activeLayers.houseNumbers) {
+            filterHouseNumbers();
+        }
+    });
+
+    searchInputEl.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activeLayers.houseNumbers && layers.houseNumbers) {
+                const markers = layers.houseNumbers.getLayers();
+                if (markers.length > 0) {
+                    // Fly to the first matched marker
+                    const targetMarker = markers[0];
+                    map.flyTo(targetMarker.getLatLng(), 20, { duration: 1.5 });
+                    // Open popup after animation
+                    setTimeout(() => {
+                        targetMarker.openPopup();
+                    }, 1600);
+                }
+            }
+        }
+    });
+
     // Setup bottom sheet buttons
     document.querySelectorAll('.layer-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -132,10 +174,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btnEl.classList.remove('active');
                 map.removeLayer(layers[layerKey]);
                 activeLayers[layerKey] = false;
+                
+                if (layerKey === 'houseNumbers') {
+                    document.getElementById('houseNumberFilterContainer').classList.add('d-none');
+                }
             } else {
                 btnEl.classList.add('active');
                 map.addLayer(layers[layerKey]);
                 activeLayers[layerKey] = true;
+                
+                if (layerKey === 'houseNumbers') {
+                    document.getElementById('houseNumberFilterContainer').classList.remove('d-none');
+                }
             }
         });
     });
@@ -161,6 +211,18 @@ function initMap() {
         const mapDiv = document.getElementById('publicMap');
         const zoom = map.getZoom();
         
+        if (zoom >= 19) {
+            mapDiv.classList.add('zoom-19-up');
+        } else {
+            mapDiv.classList.remove('zoom-19-up');
+        }
+        
+        if (zoom >= 18) {
+            mapDiv.classList.add('zoom-18-up');
+        } else {
+            mapDiv.classList.remove('zoom-18-up');
+        }
+        
         if (zoom >= 16) {
             mapDiv.classList.add('show-road-labels');
         } else {
@@ -172,48 +234,14 @@ function initMap() {
         } else {
             mapDiv.classList.remove('hide-village-labels');
         }
-
-        if (zoom < 14) {
-            mapDiv.classList.add('hide-village-labels');
-        } else {
-            mapDiv.classList.remove('hide-village-labels');
-        }
-    });
-
-    // Handle dynamic tooltips to prevent lag
-    map.on('zoomend moveend', function() {
-        const zoom = map.getZoom();
-        if (zoom >= 19 && layers.lighting) {
-            const bounds = map.getBounds();
-            layers.lighting.eachLayer(circle => {
-                if (bounds.contains(circle.getLatLng())) {
-                    if (!circle.getTooltip()) {
-                        circle.bindTooltip(`<b>${circle.pole_code}</b><br><span style="font-size:0.65rem;color:#94a3b8;">${circle.light_type || '-'}</span>`, {
-                            permanent: true, direction: 'right', offset: [5, 0], className: 'pole-label-tooltip'
-                        });
-                    }
-                } else {
-                    if (circle.getTooltip()) circle.unbindTooltip();
-                }
-            });
-        } else if (layers.lighting) {
-            layers.lighting.eachLayer(circle => {
-                if (circle.getTooltip()) circle.unbindTooltip();
-            });
-        }
     });
 
     // Initial check
     const initialZoom = map.getZoom();
-    if (initialZoom >= 16) {
-        document.getElementById('publicMap').classList.add('show-road-labels');
-    }
-    if (initialZoom < 14) {
-        document.getElementById('publicMap').classList.add('hide-village-labels');
-    }
-    if (initialZoom < 14) {
-        document.getElementById('publicMap').classList.add('hide-village-labels');
-    }
+    if (initialZoom >= 19) document.getElementById('publicMap').classList.add('zoom-19-up');
+    if (initialZoom >= 18) document.getElementById('publicMap').classList.add('zoom-18-up');
+    if (initialZoom >= 16) document.getElementById('publicMap').classList.add('show-road-labels');
+    if (initialZoom < 14) document.getElementById('publicMap').classList.add('hide-village-labels');
 
     // Add active layers to map initially
     Object.keys(activeLayers).forEach(key => {
@@ -396,7 +424,14 @@ async function loadPublicData() {
                     if (!p.lat || !p.lng || (p.lat === 0 && p.lng === 0)) return;
                     const lightingIcon = L.divIcon({
                         className: 'custom-lighting-marker',
-                        html: `<div style="color: #fde047; font-size: 16px; text-shadow: 0 0 5px rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-lightbulb"></i></div>`,
+                        html: `
+                            <div style="color: #fde047; font-size: 16px; text-shadow: 0 0 5px rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; position: relative; z-index: 2;">
+                                <i class="fa-solid fa-lightbulb"></i>
+                            </div>
+                            <div class="marker-label-lighting">
+                                ${p.pole_code}
+                            </div>
+                        `,
                         iconSize: [16, 16],
                         iconAnchor: [8, 8]
                     });
@@ -455,6 +490,32 @@ async function loadPublicData() {
         const statWmEl = document.getElementById('stat-watermeter');
         if (statWmEl) statWmEl.textContent = waterMeterCount.toLocaleString();
 
+        // 6.7 House Numbers (Google Sheets)
+        await new Promise((resolve) => {
+            if (typeof Papa === 'undefined') {
+                resolve();
+                return;
+            }
+            const SHEET_URL = 'https://docs.google.com/spreadsheets/d/14nG66q5NgSg3bBVnN2WfHgf0cVeMsKVz87B3QBhxVyo/gviz/tq?tqx=out:csv&sheet=สิ่งปลูกสร้าง';
+            Papa.parse(SHEET_URL, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.data) {
+                        houseNumbersData = results.data;
+                        populateMooFilterMap(houseNumbersData);
+                        renderHouseNumbers();
+                    }
+                    resolve();
+                },
+                error: function(err) {
+                    console.error("Error loading house numbers:", err);
+                    resolve();
+                }
+            });
+        });
+
         // 7, 8, 9 Boundaries and Markers
         const dbBoundaries = await (typeof BoundarySpatialService !== 'undefined' ? BoundarySpatialService.loadBoundaries() : Promise.resolve([]));
         dbBoundaries.forEach(b => {
@@ -501,16 +562,20 @@ async function loadPublicData() {
 
 
 
-        // Fit map bounds to show everything if there is data
-        const allBounds = L.latLngBounds();
-        Object.values(layers).forEach(group => {
-            if (group.getLayers().length > 0) {
-                allBounds.extend(group.getBounds());
+        // Fit map bounds to Subdistrict boundary if available, else fallback to all data
+        if (layers.boundarySubdistrict && layers.boundarySubdistrict.getLayers().length > 0) {
+            map.fitBounds(layers.boundarySubdistrict.getBounds(), { padding: [20, 20] });
+        } else {
+            const allBounds = L.latLngBounds();
+            Object.values(layers).forEach(group => {
+                if (group && typeof group.getLayers === 'function' && group.getLayers().length > 0) {
+                    allBounds.extend(group.getBounds());
+                }
+            });
+            
+            if (allBounds.isValid()) {
+                map.fitBounds(allBounds, { padding: [20, 20] });
             }
-        });
-        
-        if (allBounds.isValid()) {
-            map.fitBounds(allBounds, { padding: [20, 20] });
         }
 
     } catch (err) {
@@ -558,5 +623,135 @@ function viewPublicImage(url) {
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
         }
+    }
+}
+
+function renderHouseNumbers(filteredData = houseNumbersData) {
+    if (!layers.houseNumbers) return;
+    layers.houseNumbers.clearLayers();
+
+    filteredData.forEach(row => {
+        const keys = Object.keys(row);
+        const getVal = (possibleKeys) => {
+            for(let k of possibleKeys) {
+                const match = keys.find(key => key.trim() === k || key.includes(k));
+                if(match && row[match]) return row[match].trim();
+            }
+            return '-';
+        };
+
+        const houseCode = getVal(['รหัสบ้าน', 'รหัส']);
+        const houseNo = getVal(['บ้านเลขที่']);
+        const moo = getVal(['หมู่']);
+        const name = getVal(['ชื่อ-สกุล(เจ้าบ้าน)', 'ชื่อ-สกุล']);
+        const coords = getVal(['พิกัด']);
+        const imgBuilding = getVal(['ภาพถ่ายสิ่งปลูกสร้าง']);
+
+        if (coords !== '-' && coords !== '') {
+            const [latStr, lngStr] = coords.split(',').map(s => s.trim());
+            const lat = parseFloat(latStr);
+            const lng = parseFloat(lngStr);
+            
+            if (!isNaN(lat) && !isNaN(lng)) {
+                const icon = L.divIcon({
+                    className: 'custom-house-marker',
+                    html: `
+                        <div style="background-color: #f97316; color: white; width: 26px; height: 26px; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 13px; position: relative; z-index: 2;">
+                            <i class="fa-solid fa-house-chimney"></i>
+                        </div>
+                        <div class="marker-label-house">
+                            ${houseNo} (ม.${moo})
+                        </div>
+                    `,
+                    iconSize: [26, 26],
+                    iconAnchor: [13, 13]
+                });
+                
+                const marker = L.marker([lat, lng], { icon: icon });
+                
+                let imgTag = imgBuilding !== '-' && imgBuilding.length > 5 ? `<div style="text-align:center;margin-top:5px;"><img src="${imgBuilding}" onclick="viewPublicImage('${imgBuilding}')" style="width:100%;max-height:100px;object-fit:cover;border-radius:5px;cursor:pointer;" title="คลิกเพื่อขยายภาพ"></div>` : '';
+                
+                const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+                const navBtn = `<div class="mt-3"><a href="${navUrl}" target="_blank" class="btn btn-sm btn-primary w-100 fw-bold shadow-sm" style="font-size: 0.8rem; border-radius: 6px; color: white; display: flex; align-items: center; justify-content: center; gap: 0.25rem;"><i class="fa-solid fa-car"></i> นำทางไปยังบ้านหลังนี้</a></div>`;
+                
+                marker.bindPopup(buildInfraPopupHTML('บ้านเลขที่', houseCode, `
+                    <b>บ้านเลขที่:</b> ${houseNo} หมู่ ${moo}<br>
+                    <b>เจ้าบ้าน:</b> ${name}
+                    ${imgTag}
+                    ${navBtn}
+                `), { className: 'public-popup' });
+                
+                layers.houseNumbers.addLayer(marker);
+            }
+        }
+    });
+}
+
+function filterHouseNumbers() {
+    const searchTxt = document.getElementById('searchInput').value.toLowerCase();
+    const mooFilter = document.getElementById('mooFilter').value;
+    
+    const filtered = houseNumbersData.filter(row => {
+        const keys = Object.keys(row);
+        const getVal = (possibleKeys) => {
+            for(let k of possibleKeys) {
+                const match = keys.find(key => key.trim() === k || key.includes(k));
+                if(match && row[match]) return row[match].trim().toLowerCase();
+            }
+            return '';
+        };
+        const houseNo = getVal(['บ้านเลขที่']);
+        const moo = getVal(['หมู่']);
+
+        let matchSearch = true;
+        if (searchTxt) {
+            matchSearch = (houseNo === searchTxt.trim());
+        }
+
+        let matchMoo = true;
+        if (mooFilter) {
+            matchMoo = moo === mooFilter;
+        }
+
+        return matchSearch && matchMoo;
+    });
+
+    renderHouseNumbers(filtered);
+}
+
+function populateMooFilterMap(data) {
+    const mooFilter = document.getElementById('mooFilter');
+    if (!mooFilter) return;
+    const currentVal = mooFilter.value;
+    
+    const moos = new Set();
+    data.forEach(row => {
+        const keys = Object.keys(row);
+        const getVal = (possibleKeys) => {
+            for(let k of possibleKeys) {
+                const match = keys.find(key => key.trim() === k || key.includes(k));
+                if(match && row[match]) return row[match].trim();
+            }
+            return '';
+        };
+        const moo = getVal(['หมู่']);
+        if (moo && moo !== '-') {
+            const mooMatch = moo.match(/\d+/);
+            if (mooMatch) {
+                moos.add(mooMatch[0]);
+            }
+        }
+    });
+
+    const sortedMoos = Array.from(moos).sort((a, b) => parseInt(a) - parseInt(b));
+    
+    let html = '<option value="">ทุกหมู่บ้าน (Moo All)</option>';
+    sortedMoos.forEach(m => {
+        html += `<option value="${m}">หมู่ ${m}</option>`;
+    });
+    
+    mooFilter.innerHTML = html;
+    if (sortedMoos.includes(currentVal)) {
+        mooFilter.value = currentVal;
     }
 }
