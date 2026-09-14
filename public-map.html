@@ -58,11 +58,22 @@
         </header>
 
         <!-- Search Bar Overlay -->
-        <div class="search-overlay glass-panel collapsed" id="searchOverlay">
-            <div class="input-group flex-nowrap">
+        <div class="search-overlay glass-panel collapsed" id="searchOverlay" style="flex-direction: column; gap: 0.5rem; padding: 0.5rem; align-items: stretch; border-radius: 1rem;">
+            <div class="input-group flex-nowrap w-100">
                 <span class="input-group-text bg-transparent border-0 text-white opacity-90 cursor-pointer" id="searchToggleBtn"><i class="fa-solid fa-magnifying-glass"></i></span>
                 <input type="text" class="form-control bg-transparent border-0 text-white shadow-none placeholder-white search-input-field" placeholder="ค้นหาสถานที่ พิกัด หรือชื่อถนน..." id="searchInput">
                 <button class="btn border-0 text-white opacity-70 d-none d-md-block search-action-btn" onclick="locateUser()" title="My Location"><i class="fa-solid fa-location-crosshairs"></i></button>
+            </div>
+            <!-- House Number specific filter -->
+            <div id="houseNumberFilterContainer" class="w-100 d-none" style="padding-left: 2.5rem; padding-right: 0.5rem;">
+                <select class="form-select bg-dark text-white border-secondary form-select-sm" id="mooFilter" onchange="filterHouseNumbers()">
+                    <option value="">ทุกหมู่บ้าน (Moo All)</option>
+                    <option value="1">หมู่ 1</option>
+                    <option value="2">หมู่ 2</option>
+                    <option value="3">หมู่ 3</option>
+                    <option value="4">หมู่ 4</option>
+                    <option value="5">หมู่ 5</option>
+                </select>
             </div>
         </div>
 
@@ -150,6 +161,10 @@
                     <i class="fa-solid fa-faucet-drip text-blue-400"></i>
                     <span>มาตรน้ำประปา</span>
                 </button>
+                <button class="layer-btn" data-layer="houseNumbers">
+                    <i class="fa-solid fa-house-chimney text-orange-500"></i>
+                    <span>บ้านเลขที่</span>
+                </button>
             </div>
         </div>
     </div>
@@ -173,6 +188,7 @@
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     
     <!-- Supabase Connection & Existing Services -->
     <script src="assets/js/supabase-client.js"></script>
