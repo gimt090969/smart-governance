@@ -146,23 +146,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    function flyToSearchResult() {
+        if (activeLayers.houseNumbers && layers.houseNumbers) {
+            const markers = layers.houseNumbers.getLayers();
+            if (markers.length > 0) {
+                // Fly to the first matched marker
+                const targetMarker = markers[0];
+                map.flyTo(targetMarker.getLatLng(), 20, { duration: 1.5 });
+                // Open popup after animation
+                setTimeout(() => {
+                    targetMarker.openPopup();
+                }, 1600);
+            }
+        }
+    }
+
     searchInputEl.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
-            if (activeLayers.houseNumbers && layers.houseNumbers) {
-                const markers = layers.houseNumbers.getLayers();
-                if (markers.length > 0) {
-                    // Fly to the first matched marker
-                    const targetMarker = markers[0];
-                    map.flyTo(targetMarker.getLatLng(), 20, { duration: 1.5 });
-                    // Open popup after animation
-                    setTimeout(() => {
-                        targetMarker.openPopup();
-                    }, 1600);
-                }
-            }
+            flyToSearchResult();
         }
     });
+
+    const searchSubmitBtn = document.getElementById('searchSubmitBtn');
+    if (searchSubmitBtn) {
+        searchSubmitBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            flyToSearchResult();
+        });
+    }
 
     // Setup bottom sheet buttons
     document.querySelectorAll('.layer-btn').forEach(btn => {
