@@ -101,4 +101,21 @@
             initMobileSidebar();
         };
     }
+
+    // ---- Load PWA Features Globally ----
+    function loadPWAScript() {
+        if (!document.querySelector('script[src*="pwa-init.js"]')) {
+            var pwaScript = document.createElement('script');
+            pwaScript.src = 'assets/js/pwa-init.js';
+            pwaScript.async = true;
+            document.body.appendChild(pwaScript);
+        }
+    }
+    
+    // Inject PWA script as soon as possible
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadPWAScript);
+    } else {
+        loadPWAScript();
+    }
 })();
