@@ -966,6 +966,11 @@
         let pendingLineProfile = null;
 
         function handleLineLogin(target = 'eservice') {
+            if (target !== 'eservice') {
+                alert('กำลังปรับปรุงระบบ');
+                return;
+            }
+            
             localStorage.setItem('sgov_citizen_target', target);
             
             // if already logged in, redirect directly
