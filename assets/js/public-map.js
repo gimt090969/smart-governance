@@ -21,6 +21,28 @@ let activeLayers = {
 
 let userMarker = null;
 let userCircle = null;
+let layerLoaded = {};
+
+const GISCache = {
+    get: (key) => {
+        try {
+            const itemStr = localStorage.getItem('public_map_cache_' + key);
+            if (!itemStr) return null;
+            const item = JSON.parse(itemStr);
+            if (new Date().getTime() > item.expiry) {
+                localStorage.removeItem('public_map_cache_' + key);
+                return null;
+            }
+            return item.value;
+        } catch(e) { return null; }
+    },
+    set: (key, value, ttlHours = 2) => {
+        try {
+            const item = { value, expiry: new Date().getTime() + (ttlHours * 3600 * 1000) };
+            localStorage.setItem('public_map_cache_' + key, JSON.stringify(item));
+        } catch(e) { console.warn('Local storage cache limit reached'); }
+    }
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
     if (typeof DigitalInfraService !== 'undefined' && typeof DigitalInfraService.loadRoadSurfaceTypesFromDB === 'function') {
@@ -178,7 +200,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Setup bottom sheet buttons
     document.querySelectorAll('.layer-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        btn.addEventListener('click', async (e) => {
             const btnEl = e.currentTarget;
             const layerKey = btnEl.getAttribute('data-layer');
             
@@ -192,6 +214,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             } else {
                 btnEl.classList.add('active');
+                
+                const icon = btnEl.querySelector('i');
+                const originalClass = icon.className;
+                icon.className = 'fa-solid fa-spinner fa-spin text-slate-400';
+                
+                await fetchAndRenderLayer(layerKey);
+                
+                icon.className = originalClass;
                 map.addLayer(layers[layerKey]);
                 activeLayers[layerKey] = true;
                 
@@ -292,289 +322,15 @@ async function loadPublicData() {
             return;
         }
 
-        // 1. Roads & Planned Roads (LineStrings)
-        const roads = await DigitalInfraService.getRoads();
-        roads.forEach(r => {
-            let polyline;
-            const style = DigitalInfraService.getRoadStyle(r);
-            if (r.geom && r.geom.coordinates && r.geom.coordinates.length > 0) {
-                const pts = r.geom.coordinates.map(coord => [coord[1], coord[0]]);
-                polyline = L.polyline(pts, style);
-            } else if (r.latitude && r.longitude) {
-                // mock polyline for missing geometry
-                polyline = L.polyline([
-                    [r.latitude, r.longitude - 0.005], [r.latitude, r.longitude + 0.005]
-                ], style);
-            } else { return; }
-
-            const popupHtml = buildInfraPopupHTML(r.road_type === 'ถนนในแผนพัฒนา' ? 'ถนนในแผนพัฒนา' : 'ถนนสายทาง', r.road_id, `
-                <b>ชื่อถนน:</b> ${r.road_name || '-'}<br>
-                <b>ประเภทผิวจราจร:</b> ${r.surface_type || '-'}<br>
-                <b>กว้างเฉลี่ย:</b> ${r.width} ม. · <b>ยาว:</b> ${(r.length_m || 0).toLocaleString()} ม.<br>
-                <b>งบประมาณ/แหล่งที่มา:</b> ${r.budget_source || '-'}
-                <div id="mini-map-${r.id}" style="height: 140px; width: 100%; margin-top: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #0f172a; overflow: hidden; position: relative;"></div>
-            `);
-            polyline.bindPopup(popupHtml, { className: 'public-popup', minWidth: 260 });
-            
-            // Render mini map when popup opens
-            polyline.on('popupopen', function() {
-                setTimeout(() => {
-                    const mapId = 'mini-map-' + r.id;
-                    const container = document.getElementById(mapId);
-                    if (container && !container._leaflet_id) {
-                        const miniMap = L.map(container, {
-                            zoomControl: false,
-                            attributionControl: false,
-                            dragging: false,
-                            touchZoom: false,
-                            scrollWheelZoom: false,
-                            doubleClickZoom: false,
-                            boxZoom: false
-                        });
-                        
-                        L.tileLayer('http://mt0.google.com/vt/lyrs=y&hl=th&x={x}&y={y}&z={z}', {
-                            maxZoom: 20
-                        }).addTo(miniMap);
-                        
-                        const miniLine = L.polyline(polyline.getLatLngs(), { color: '#8b5cf6', weight: 4 }).addTo(miniMap);
-                        
-                        const latlngs = polyline.getLatLngs();
-                        if (latlngs && latlngs.length > 0) {
-                            // Leaflet can return array of latlngs or array of arrays for multi-polylines
-                            const pts = (Array.isArray(latlngs[0]) && latlngs[0].lat === undefined) ? latlngs[0] : latlngs;
-                            if (pts.length >= 2) {
-                                L.circleMarker(pts[0], { radius: 4, color: '#ef4444', fillColor: 'white', fillOpacity: 1, weight: 2 }).addTo(miniMap); // Red Start
-                                L.circleMarker(pts[pts.length - 1], { radius: 4, color: '#10b981', fillColor: 'white', fillOpacity: 1, weight: 2 }).addTo(miniMap); // Green End
-                            }
-                        }
-                        
-                        miniMap.fitBounds(miniLine.getBounds(), { padding: [15, 15], maxZoom: 18 });
-                    }
-                }, 100);
-            });
-            
-            // Add permanent tooltip for road details
-            if (r.road_name) {
-                const tooltipHtml = `
-                    <div style="text-align: center; line-height: 1.2; cursor: pointer;">
-                        <div style="font-weight: 600; font-size: 0.75rem; color: #0f172a;">${r.road_name}</div>
-                        <div style="font-size: 0.65rem; color: #475569; margin-top: 2px;">
-                            ${r.surface_type || 'ไม่ระบุ'} • ${(r.length_m || 0).toLocaleString()} ม.
-                        </div>
-                    </div>
-                `;
-                polyline.bindTooltip(tooltipHtml, {
-                    permanent: true,
-                    direction: 'center',
-                    className: 'road-label-tooltip',
-                    interactive: true
-                });
-            }
-            
-            if (r.road_type === 'ถนนในแผนพัฒนา') {
-                layers.plannedRoads.addLayer(polyline);
-            } else {
-                layers.roads.addLayer(polyline);
+        const promises = [];
+        Object.keys(activeLayers).forEach(key => {
+            if (activeLayers[key]) {
+                promises.push(fetchAndRenderLayer(key));
             }
         });
+        
+        await Promise.all(promises);
 
-        // 2. Water
-        const water = await DigitalInfraService.getWater();
-        water.forEach(w => {
-            let polygon;
-            if (w.geom && w.geom.coordinates) {
-                const pts = w.geom.coordinates[0].map(c => [c[1], c[0]]);
-                polygon = L.polygon(pts, DigitalInfraService.LAYER_STYLES.water);
-            } else if (w.latitude && w.longitude) {
-                polygon = L.circle([w.latitude, w.longitude], { radius: Math.sqrt(w.surface_area_sqm || 1000), ...DigitalInfraService.LAYER_STYLES.water });
-            } else { return; }
-
-            polygon.bindPopup(buildInfraPopupHTML('แหล่งน้ำ/สระ', w.water_code, `
-                <b>ชื่อ:</b> ${w.water_name || '-'}<br>
-                <b>พื้นที่ผิวน้ำ:</b> ${(w.surface_area_sqm || 0).toLocaleString()} ตร.ม.<br>
-                <b>ความจุน้ำ:</b> ${(w.capacity_cum || 0).toLocaleString()} ลบ.ม.
-            `), { className: 'public-popup' });
-            layers.water.addLayer(polygon);
-        });
-
-        // 3. Waterways
-        const waterways = await DigitalInfraService.getWaterways();
-        waterways.forEach(ww => {
-            let polyline;
-            if (ww.geom && ww.geom.coordinates) {
-                const pts = ww.geom.coordinates.map(c => [c[1], c[0]]);
-                polyline = L.polyline(pts, DigitalInfraService.LAYER_STYLES.waterways);
-            } else if (ww.latitude && ww.longitude) {
-                polyline = L.polyline([[ww.latitude, ww.longitude - 0.01], [ww.latitude, ww.longitude + 0.01]], DigitalInfraService.LAYER_STYLES.waterways);
-            } else { return; }
-
-            polyline.bindPopup(buildInfraPopupHTML('ลำคลอง/ลำห้วย', ww.waterway_code, `
-                <b>ชื่อ:</b> ${ww.waterway_name || '-'}<br>
-                <b>ความยาว:</b> ${(ww.length_m || 0).toLocaleString()} เมตร
-            `), { className: 'public-popup' });
-            layers.waterways.addLayer(polyline);
-        });
-
-        // 4. Drainage
-        const drainage = await DigitalInfraService.getDrainage();
-        drainage.forEach(d => {
-            if (d.latitude && d.longitude) {
-                const circle = L.circleMarker([d.latitude, d.longitude], DigitalInfraService.LAYER_STYLES.drainage);
-                circle.bindPopup(buildInfraPopupHTML('ท่อ/ฝาระบายน้ำ', d.asset_id, `
-                    <b>ประเภท:</b> ${d.drainage_type}<br>
-                    <b>วัสดุ:</b> ${d.material}
-                `), { className: 'public-popup' });
-                layers.drainage.addLayer(circle);
-            }
-        });
-
-        // 5. Lighting
-        if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-            const { data: poles, error } = await supabaseClient.from('electric_poles').select('*');
-            if (!error && poles) {
-                poles.forEach(p => {
-                    if (!p.lat || !p.lng || (p.lat === 0 && p.lng === 0)) return;
-                    const lightingIcon = L.divIcon({
-                        className: 'custom-lighting-marker',
-                        html: `
-                            <div style="color: #fde047; font-size: 16px; text-shadow: 0 0 5px rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; position: relative; z-index: 2;">
-                                <i class="fa-solid fa-lightbulb"></i>
-                            </div>
-                            <div class="marker-label-lighting">
-                                ${p.pole_code}
-                            </div>
-                        `,
-                        iconSize: [16, 16],
-                        iconAnchor: [8, 8]
-                    });
-                    const circle = L.marker([p.lat, p.lng], { icon: lightingIcon });
-                    circle.pole_code = p.pole_code;
-                    circle.light_type = p.light_type;
-                    const repairUrl = `citizen-services.html?autoOpen=electric&poleCode=${encodeURIComponent(p.pole_code || '')}`;
-                    circle.bindPopup(buildInfraPopupHTML('เสาไฟฟ้าส่องสว่าง', p.pole_code, `<b>ประเภทโคม:</b> ${p.light_type || '-'}<br><b>สถานะ:</b> ${p.status === 'broken' ? 'ชำรุด' : 'ปกติ'}<div class="mt-3"><a href="${repairUrl}" target="_blank" class="btn btn-sm btn-warning w-100 fw-bold shadow-sm" style="font-size: 0.8rem; border-radius: 6px; color: #1e293b;"><i class="fa-solid fa-wrench me-1"></i> แจ้งซ่อมไฟฟ้า</a></div>`), { className: 'public-popup' });
-                    layers.lighting.addLayer(circle);
-                });
-            }
-        }
-
-        // 6. Public Land
-        const publicLand = await DigitalInfraService.getPublicLand();
-        publicLand.forEach(pl => {
-            if (pl.latitude && pl.longitude) {
-                const polygon = L.polygon([
-                    [pl.latitude - 0.003, pl.longitude - 0.003],
-                    [pl.latitude - 0.003, pl.longitude + 0.003],
-                    [pl.latitude + 0.003, pl.longitude + 0.003],
-                    [pl.latitude + 0.003, pl.longitude - 0.003]
-                ], DigitalInfraService.LAYER_STYLES.publicLand);
-                
-                polygon.bindPopup(buildInfraPopupHTML('ที่ดินสาธารณประโยชน์', pl.land_name, `
-                    <b>รหัสทะเบียน:</b> ${pl.land_code || '-'}<br>
-                    <b>การใช้ประโยชน์:</b> ${pl.current_use || '-'}
-                `), { className: 'public-popup' });
-                layers.publicLand.addLayer(polygon);
-            }
-        });
-
-        // 6.5 Water Meters
-        const waterMeters = await DigitalInfraService.getWaterMeters();
-        let waterMeterCount = 0;
-        waterMeters.forEach(wm => {
-            if (wm.latitude && wm.longitude) {
-                waterMeterCount++;
-                const meterIcon = L.divIcon({
-                    className: 'custom-watermeter-marker',
-                    html: `<div style="background-color: #3b82f6; color: white; width: 26px; height: 26px; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 13px;"><i class="fa-solid fa-faucet-drip"></i></div>`,
-                    iconSize: [26, 26],
-                    iconAnchor: [13, 13]
-                });
-                const marker = L.marker([wm.latitude, wm.longitude], { icon: meterIcon });
-                let imgTag = wm.image_url ? `<div style="text-align:center;margin-top:5px;"><img src="${wm.image_url}" onclick="viewPublicImage('${wm.image_url}')" style="width:100%;max-height:100px;object-fit:cover;border-radius:5px;cursor:pointer;" title="คลิกเพื่อขยายภาพ"></div>` : '';
-                marker.bindPopup(buildInfraPopupHTML('มาตรน้ำประปา', wm.meter_code, `
-                    <b>บ้านเลขที่:</b> ${wm.house_number || '-'} หมู่ ${wm.village_no || '-'}<br>
-                    <b>เจ้าของ:</b> ${wm.owner_name || '-'}<br>
-                    <b>ผู้ดูแล:</b> ${wm.caretaker_name || '-'}
-                    ${imgTag}
-                `), { className: 'public-popup' });
-                layers.waterMeter.addLayer(marker);
-            }
-        });
-        const statWmEl = document.getElementById('stat-watermeter');
-        if (statWmEl) statWmEl.textContent = waterMeterCount.toLocaleString();
-
-        // 6.7 House Numbers (Google Sheets)
-        await new Promise((resolve) => {
-            if (typeof Papa === 'undefined') {
-                resolve();
-                return;
-            }
-            const SHEET_URL = 'https://docs.google.com/spreadsheets/d/14nG66q5NgSg3bBVnN2WfHgf0cVeMsKVz87B3QBhxVyo/gviz/tq?tqx=out:csv&sheet=สิ่งปลูกสร้าง';
-            Papa.parse(SHEET_URL, {
-                download: true,
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    if (results.data) {
-                        houseNumbersData = results.data;
-                        populateMooFilterMap(houseNumbersData);
-                        renderHouseNumbers();
-                    }
-                    resolve();
-                },
-                error: function(err) {
-                    console.error("Error loading house numbers:", err);
-                    resolve();
-                }
-            });
-        });
-
-        // 7, 8, 9 Boundaries and Markers
-        const dbBoundaries = await (typeof BoundarySpatialService !== 'undefined' ? BoundarySpatialService.loadBoundaries() : Promise.resolve([]));
-        dbBoundaries.forEach(b => {
-            if (b.geom && b.geom.coordinates) {
-                const isSubdistrict = b.boundary_type === 'แนวเขตตำบล';
-                const style = isSubdistrict ? 
-                    { color: '#facc15', fillColor: '#fef08a', fillOpacity: 0.15, weight: 5, dashArray: '12, 10' } :
-                    { color: '#ef4444', fillColor: '#fee2e2', fillOpacity: 0.10, weight: 3.5, dashArray: '6, 6' };
-                
-                const geojsonLayer = L.geoJSON(b.geom, { style: style });
-                geojsonLayer.bindPopup(buildInfraPopupHTML(b.boundary_type, b.boundary_name, `
-                    <b>ขนาดเนื้อที่:</b> ${formatSqmToThaiArea(b.area_sqm)}
-                `), { className: 'public-popup' });
-                
-                // Add permanent tooltip for boundary name
-                const labelText = isSubdistrict ? b.boundary_name : (b.boundary_name + (b.village_no ? ` (หมู่ ${b.village_no})` : ''));
-                geojsonLayer.bindTooltip(labelText, {
-                    permanent: true,
-                    direction: 'center',
-                    className: isSubdistrict ? 'boundary-label-subdistrict' : 'boundary-label-village'
-                });
-                
-                if (isSubdistrict) layers.boundarySubdistrict.addLayer(geojsonLayer);
-                else layers.boundaryVillage.addLayer(geojsonLayer);
-            }
-        });
-
-        const dbMarkers = await DigitalInfraService.getBoundaryMarkers();
-        dbMarkers.forEach(bm => {
-            if (bm.latitude && bm.longitude) {
-                const markerColor = bm.marker_type.includes('ตำบล') ? '#facc15' : '#ef4444';
-                const customDivIcon = L.divIcon({
-                    className: 'custom-survey-marker',
-                    html: `
-                        <div style="width: 14px; height: 14px; background: ${markerColor}; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>
-                    `,
-                    iconSize: [14, 14], iconAnchor: [7, 7]
-                });
-                const marker = L.marker([bm.latitude, bm.longitude], { icon: customDivIcon });
-                marker.bindPopup(buildInfraPopupHTML('หมุดหลักเขต', bm.marker_code, `<b>รายละเอียด:</b> ${bm.description}`), { className: 'public-popup' });
-                layers.boundaryMarker.addLayer(marker);
-            }
-        });
-
-
-
-        // Fit map bounds to Subdistrict boundary if available, else fallback to all data
         if (layers.boundarySubdistrict && layers.boundarySubdistrict.getLayers().length > 0) {
             map.fitBounds(layers.boundarySubdistrict.getBounds(), { padding: [20, 20] });
         } else {
@@ -584,14 +340,268 @@ async function loadPublicData() {
                     allBounds.extend(group.getBounds());
                 }
             });
-            
             if (allBounds.isValid()) {
                 map.fitBounds(allBounds, { padding: [20, 20] });
             }
         }
-
     } catch (err) {
-        console.error("Error loading public data:", err);
+        console.error("Error loading initial public data:", err);
+    }
+}
+
+async function fetchAndRenderLayer(layerKey) {
+    if (layerLoaded[layerKey]) return; // Already loaded
+
+    try {
+        if (layerKey === 'roads' || layerKey === 'plannedRoads') {
+            if (layerLoaded['roads'] && layerLoaded['plannedRoads']) return;
+            let roads = GISCache.get('roads');
+            if (!roads) {
+                roads = await DigitalInfraService.getRoads();
+                GISCache.set('roads', roads);
+            }
+            roads.forEach(r => {
+                let polyline;
+                const style = DigitalInfraService.getRoadStyle(r);
+                if (r.geom && r.geom.coordinates && r.geom.coordinates.length > 0) {
+                    const pts = r.geom.coordinates.map(coord => [coord[1], coord[0]]);
+                    polyline = L.polyline(pts, style);
+                } else if (r.latitude && r.longitude) {
+                    polyline = L.polyline([
+                        [r.latitude, r.longitude - 0.005], [r.latitude, r.longitude + 0.005]
+                    ], style);
+                } else { return; }
+
+                const popupHtml = buildInfraPopupHTML(r.road_type === 'ถนนในแผนพัฒนา' ? 'ถนนในแผนพัฒนา' : 'ถนนสายทาง', r.road_id, `
+                    <b>ชื่อถนน:</b> ${r.road_name || '-'}<br>
+                    <b>ประเภทผิวจราจร:</b> ${r.surface_type || '-'}<br>
+                    <b>กว้างเฉลี่ย:</b> ${r.width} ม. · <b>ยาว:</b> ${(r.length_m || 0).toLocaleString()} ม.<br>
+                    <b>งบประมาณ/แหล่งที่มา:</b> ${r.budget_source || '-'}
+                    <div id="mini-map-${r.id}" style="height: 140px; width: 100%; margin-top: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: #0f172a; overflow: hidden; position: relative;"></div>
+                `);
+                polyline.bindPopup(popupHtml, { className: 'public-popup', minWidth: 260 });
+                
+                polyline.on('popupopen', function() {
+                    setTimeout(() => {
+                        const mapId = 'mini-map-' + r.id;
+                        const container = document.getElementById(mapId);
+                        if (container && !container._leaflet_id) {
+                            const miniMap = L.map(container, {
+                                zoomControl: false, attributionControl: false, dragging: false, touchZoom: false, scrollWheelZoom: false, doubleClickZoom: false, boxZoom: false
+                            });
+                            L.tileLayer('http://mt0.google.com/vt/lyrs=y&hl=th&x={x}&y={y}&z={z}', { maxZoom: 20 }).addTo(miniMap);
+                            const miniLine = L.polyline(polyline.getLatLngs(), { color: '#8b5cf6', weight: 4 }).addTo(miniMap);
+                            const latlngs = polyline.getLatLngs();
+                            if (latlngs && latlngs.length > 0) {
+                                const pts = (Array.isArray(latlngs[0]) && latlngs[0].lat === undefined) ? latlngs[0] : latlngs;
+                                if (pts.length >= 2) {
+                                    L.circleMarker(pts[0], { radius: 4, color: '#ef4444', fillColor: 'white', fillOpacity: 1, weight: 2 }).addTo(miniMap);
+                                    L.circleMarker(pts[pts.length - 1], { radius: 4, color: '#10b981', fillColor: 'white', fillOpacity: 1, weight: 2 }).addTo(miniMap);
+                                }
+                            }
+                            miniMap.fitBounds(miniLine.getBounds(), { padding: [15, 15], maxZoom: 18 });
+                        }
+                    }, 100);
+                });
+                
+                if (r.road_name) {
+                    const tooltipHtml = `<div style="text-align: center; line-height: 1.2; cursor: pointer;"><div style="font-weight: 600; font-size: 0.75rem; color: #0f172a;">${r.road_name}</div><div style="font-size: 0.65rem; color: #475569; margin-top: 2px;">${r.surface_type || 'ไม่ระบุ'} • ${(r.length_m || 0).toLocaleString()} ม.</div></div>`;
+                    polyline.bindTooltip(tooltipHtml, { permanent: true, direction: 'center', className: 'road-label-tooltip', interactive: true });
+                }
+                if (r.road_type === 'ถนนในแผนพัฒนา') layers.plannedRoads.addLayer(polyline);
+                else layers.roads.addLayer(polyline);
+            });
+            layerLoaded['roads'] = true;
+            layerLoaded['plannedRoads'] = true;
+            
+        } else if (layerKey === 'water') {
+            let water = GISCache.get('water');
+            if (!water) {
+                water = await DigitalInfraService.getWater();
+                GISCache.set('water', water);
+            }
+            water.forEach(w => {
+                let polygon;
+                if (w.geom && w.geom.coordinates) {
+                    const pts = w.geom.coordinates[0].map(c => [c[1], c[0]]);
+                    polygon = L.polygon(pts, DigitalInfraService.LAYER_STYLES.water);
+                } else if (w.latitude && w.longitude) {
+                    polygon = L.circle([w.latitude, w.longitude], { radius: Math.sqrt(w.surface_area_sqm || 1000), ...DigitalInfraService.LAYER_STYLES.water });
+                } else return;
+                polygon.bindPopup(buildInfraPopupHTML('แหล่งน้ำ/สระ', w.water_code, `<b>ชื่อ:</b> ${w.water_name || '-'}<br><b>พื้นที่ผิวน้ำ:</b> ${(w.surface_area_sqm || 0).toLocaleString()} ตร.ม.<br><b>ความจุน้ำ:</b> ${(w.capacity_cum || 0).toLocaleString()} ลบ.ม.`), { className: 'public-popup' });
+                layers.water.addLayer(polygon);
+            });
+            layerLoaded['water'] = true;
+            
+        } else if (layerKey === 'waterways') {
+            let waterways = GISCache.get('waterways');
+            if (!waterways) {
+                waterways = await DigitalInfraService.getWaterways();
+                GISCache.set('waterways', waterways);
+            }
+            waterways.forEach(ww => {
+                let polyline;
+                if (ww.geom && ww.geom.coordinates) {
+                    const pts = ww.geom.coordinates.map(c => [c[1], c[0]]);
+                    polyline = L.polyline(pts, DigitalInfraService.LAYER_STYLES.waterways);
+                } else if (ww.latitude && ww.longitude) {
+                    polyline = L.polyline([[ww.latitude, ww.longitude - 0.01], [ww.latitude, ww.longitude + 0.01]], DigitalInfraService.LAYER_STYLES.waterways);
+                } else return;
+                polyline.bindPopup(buildInfraPopupHTML('ลำคลอง/ลำห้วย', ww.waterway_code, `<b>ชื่อ:</b> ${ww.waterway_name || '-'}<br><b>ความยาว:</b> ${(ww.length_m || 0).toLocaleString()} เมตร`), { className: 'public-popup' });
+                layers.waterways.addLayer(polyline);
+            });
+            layerLoaded['waterways'] = true;
+
+        } else if (layerKey === 'drainage') {
+            let drainage = GISCache.get('drainage');
+            if (!drainage) {
+                drainage = await DigitalInfraService.getDrainage();
+                GISCache.set('drainage', drainage);
+            }
+            drainage.forEach(d => {
+                if (d.latitude && d.longitude) {
+                    const circle = L.circleMarker([d.latitude, d.longitude], DigitalInfraService.LAYER_STYLES.drainage);
+                    circle.bindPopup(buildInfraPopupHTML('ท่อ/ฝาระบายน้ำ', d.asset_id, `<b>ประเภท:</b> ${d.drainage_type}<br><b>วัสดุ:</b> ${d.material}`), { className: 'public-popup' });
+                    layers.drainage.addLayer(circle);
+                }
+            });
+            layerLoaded['drainage'] = true;
+
+        } else if (layerKey === 'lighting') {
+            if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+                let poles = GISCache.get('lighting');
+                if (!poles) {
+                    const { data, error } = await supabaseClient.from('electric_poles').select('*');
+                    if (!error && data) {
+                        poles = data;
+                        GISCache.set('lighting', poles);
+                    } else poles = [];
+                }
+                poles.forEach(p => {
+                    if (!p.lat || !p.lng || (p.lat === 0 && p.lng === 0)) return;
+                    const lightingIcon = L.divIcon({
+                        className: 'custom-lighting-marker',
+                        html: `<div style="color: #fde047; font-size: 16px; text-shadow: 0 0 5px rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; position: relative; z-index: 2;"><i class="fa-solid fa-lightbulb"></i></div><div class="marker-label-lighting">${p.pole_code}</div>`,
+                        iconSize: [16, 16], iconAnchor: [8, 8]
+                    });
+                    const circle = L.marker([p.lat, p.lng], { icon: lightingIcon });
+                    const repairUrl = `citizen-services.html?autoOpen=electric&poleCode=${encodeURIComponent(p.pole_code || '')}`;
+                    circle.bindPopup(buildInfraPopupHTML('เสาไฟฟ้าส่องสว่าง', p.pole_code, `<b>ประเภทโคม:</b> ${p.light_type || '-'}<br><b>สถานะ:</b> ${p.status === 'broken' ? 'ชำรุด' : 'ปกติ'}<div class="mt-3"><a href="${repairUrl}" target="_blank" class="btn btn-sm btn-warning w-100 fw-bold shadow-sm" style="font-size: 0.8rem; border-radius: 6px; color: #1e293b;"><i class="fa-solid fa-wrench me-1"></i> แจ้งซ่อมไฟฟ้า</a></div>`), { className: 'public-popup' });
+                    layers.lighting.addLayer(circle);
+                });
+            }
+            layerLoaded['lighting'] = true;
+
+        } else if (layerKey === 'publicLand') {
+            let publicLand = GISCache.get('publicLand');
+            if (!publicLand) {
+                publicLand = await DigitalInfraService.getPublicLand();
+                GISCache.set('publicLand', publicLand);
+            }
+            publicLand.forEach(pl => {
+                if (pl.latitude && pl.longitude) {
+                    const polygon = L.polygon([
+                        [pl.latitude - 0.003, pl.longitude - 0.003], [pl.latitude - 0.003, pl.longitude + 0.003],
+                        [pl.latitude + 0.003, pl.longitude + 0.003], [pl.latitude + 0.003, pl.longitude - 0.003]
+                    ], DigitalInfraService.LAYER_STYLES.publicLand);
+                    polygon.bindPopup(buildInfraPopupHTML('ที่ดินสาธารณประโยชน์', pl.land_name, `<b>รหัสทะเบียน:</b> ${pl.land_code || '-'}<br><b>การใช้ประโยชน์:</b> ${pl.current_use || '-'}`), { className: 'public-popup' });
+                    layers.publicLand.addLayer(polygon);
+                }
+            });
+            layerLoaded['publicLand'] = true;
+
+        } else if (layerKey === 'waterMeter') {
+            let waterMeters = GISCache.get('waterMeter');
+            if (!waterMeters) {
+                waterMeters = await DigitalInfraService.getWaterMeters();
+                GISCache.set('waterMeter', waterMeters);
+            }
+            let waterMeterCount = 0;
+            waterMeters.forEach(wm => {
+                if (wm.latitude && wm.longitude) {
+                    waterMeterCount++;
+                    const meterIcon = L.divIcon({
+                        className: 'custom-watermeter-marker',
+                        html: `<div style="background-color: #3b82f6; color: white; width: 26px; height: 26px; border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; font-size: 13px;"><i class="fa-solid fa-faucet-drip"></i></div>`,
+                        iconSize: [26, 26], iconAnchor: [13, 13]
+                    });
+                    const marker = L.marker([wm.latitude, wm.longitude], { icon: meterIcon });
+                    let imgTag = wm.image_url ? `<div style="text-align:center;margin-top:5px;"><img src="${wm.image_url}" onclick="viewPublicImage('${wm.image_url}')" style="width:100%;max-height:100px;object-fit:cover;border-radius:5px;cursor:pointer;" title="คลิกเพื่อขยายภาพ"></div>` : '';
+                    marker.bindPopup(buildInfraPopupHTML('มาตรน้ำประปา', wm.meter_code, `<b>บ้านเลขที่:</b> ${wm.house_number || '-'} หมู่ ${wm.village_no || '-'}<br><b>เจ้าของ:</b> ${wm.owner_name || '-'}<br><b>ผู้ดูแล:</b> ${wm.caretaker_name || '-'}${imgTag}`), { className: 'public-popup' });
+                    layers.waterMeter.addLayer(marker);
+                }
+            });
+            const statWmEl = document.getElementById('stat-watermeter');
+            if (statWmEl) statWmEl.textContent = waterMeterCount.toLocaleString();
+            layerLoaded['waterMeter'] = true;
+
+        } else if (layerKey === 'houseNumbers') {
+            if (typeof Papa !== 'undefined') {
+                let hData = GISCache.get('houseNumbers');
+                if (!hData) {
+                    hData = await new Promise((resolve) => {
+                        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/14nG66q5NgSg3bBVnN2WfHgf0cVeMsKVz87B3QBhxVyo/gviz/tq?tqx=out:csv&sheet=สิ่งปลูกสร้าง';
+                        Papa.parse(SHEET_URL, {
+                            download: true, header: true, skipEmptyLines: true,
+                            complete: function(results) { resolve(results.data); },
+                            error: function(err) { console.error("Error loading house numbers:", err); resolve([]); }
+                        });
+                    });
+                    if (hData && hData.length > 0) GISCache.set('houseNumbers', hData);
+                }
+                if (hData && hData.length > 0) {
+                    houseNumbersData = hData;
+                    populateMooFilterMap(houseNumbersData);
+                    renderHouseNumbers();
+                }
+            }
+            layerLoaded['houseNumbers'] = true;
+
+        } else if (layerKey === 'boundarySubdistrict' || layerKey === 'boundaryVillage') {
+            if (layerLoaded['boundarySubdistrict'] && layerLoaded['boundaryVillage']) return;
+            let dbBoundaries = GISCache.get('boundaries');
+            if (!dbBoundaries) {
+                dbBoundaries = await (typeof BoundarySpatialService !== 'undefined' ? BoundarySpatialService.loadBoundaries() : Promise.resolve([]));
+                GISCache.set('boundaries', dbBoundaries);
+            }
+            dbBoundaries.forEach(b => {
+                if (b.geom && b.geom.coordinates) {
+                    const isSubdistrict = b.boundary_type === 'แนวเขตตำบล';
+                    const style = isSubdistrict ? { color: '#facc15', fillColor: '#fef08a', fillOpacity: 0.15, weight: 5, dashArray: '12, 10' } : { color: '#ef4444', fillColor: '#fee2e2', fillOpacity: 0.10, weight: 3.5, dashArray: '6, 6' };
+                    const geojsonLayer = L.geoJSON(b.geom, { style: style });
+                    geojsonLayer.bindPopup(buildInfraPopupHTML(b.boundary_type, b.boundary_name, `<b>ขนาดเนื้อที่:</b> ${formatSqmToThaiArea(b.area_sqm)}`), { className: 'public-popup' });
+                    const labelText = isSubdistrict ? b.boundary_name : (b.boundary_name + (b.village_no ? ` (หมู่ ${b.village_no})` : ''));
+                    geojsonLayer.bindTooltip(labelText, { permanent: true, direction: 'center', className: isSubdistrict ? 'boundary-label-subdistrict' : 'boundary-label-village' });
+                    if (isSubdistrict) layers.boundarySubdistrict.addLayer(geojsonLayer);
+                    else layers.boundaryVillage.addLayer(geojsonLayer);
+                }
+            });
+            layerLoaded['boundarySubdistrict'] = true;
+            layerLoaded['boundaryVillage'] = true;
+
+        } else if (layerKey === 'boundaryMarker') {
+            let dbMarkers = GISCache.get('boundaryMarker');
+            if (!dbMarkers) {
+                dbMarkers = await DigitalInfraService.getBoundaryMarkers();
+                GISCache.set('boundaryMarker', dbMarkers);
+            }
+            dbMarkers.forEach(bm => {
+                if (bm.latitude && bm.longitude) {
+                    const markerColor = bm.marker_type.includes('ตำบล') ? '#facc15' : '#ef4444';
+                    const customDivIcon = L.divIcon({
+                        className: 'custom-survey-marker',
+                        html: `<div style="width: 14px; height: 14px; background: ${markerColor}; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5);"></div>`,
+                        iconSize: [14, 14], iconAnchor: [7, 7]
+                    });
+                    const marker = L.marker([bm.latitude, bm.longitude], { icon: customDivIcon });
+                    marker.bindPopup(buildInfraPopupHTML('หมุดหลักเขต', bm.marker_code, `<b>รายละเอียด:</b> ${bm.description}`), { className: 'public-popup' });
+                    layers.boundaryMarker.addLayer(marker);
+                }
+            });
+            layerLoaded['boundaryMarker'] = true;
+        }
+    } catch (err) {
+        console.error(`Error loading layer ${layerKey}:`, err);
     }
 }
 
